@@ -1,5 +1,7 @@
 # narc_dp
-Narrow Angle Oneway Elastic Wave equation for rectilinear coordintes
+Narrow Angle Oneway Elastic Wave equation for rectilinear coordintes.
+
+Code from my PhD thesis and used subsequently. Main issue is the compute times due to the required small extrapolation steps needed. The finite-difference scheme could be improved to yield more efficient solutions.
 
 Reference papers for code: \
 Angus, D.A. (2007) True amplitude corrections for a narrow-angle one-way elastic wave equation, Geophysics, 72(2), T19-T26. \
