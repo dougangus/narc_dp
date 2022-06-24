@@ -1,11 +1,11 @@
 c...+....|....+....|....+....|....+....|....+....|....+....|....+....|..
 c  File Incidfrq.f contains the following 5 subroutines: Setincid, Vgrid
-c  Scsinc, Rickerw and Dot.
+c  Scsinc_old, Scsinc, Rickerw and Dot.
 c
-c  Last modified: April 16, 2012.
+c  Last modified: May 23, 2012.
 c***********************************************************************
-      subroutine setincid(tinc,nx1st,nx2,nx3,dx1,dx2,dx3,a6,uvec,wvf0,
-     +     nt,dt,p1inc,p2inc,p3inc,mwid,nord,rpeak,sigvec1,beta)
+      subroutine setincid(tinc,nx2,nx3,dx2,dx3,a6,uvec,
+     +     nt,dt,p1inc,p2inc,p3inc,mwid,nord,rpeak,cfreq,sigvec1,beta)
 c     Set up the initial conditions for the one-way operator.  
 c     This version sets up a smoothly curved (convex) wavefront. The 
 c     curved wavefront is described in terms of incidence angles at the
@@ -22,28 +22,28 @@ c               An alternative choice uses a cosine-like time pulse.
 c***********************************************************************
 
       implicit none
-      include '../Input/narc_dp.par'
+      include 'narc_dp.par'
 
-      integer nx1st,nx2,nx3,nt,nom,iom,mwid,nord,nreal
-      integer icomp,iform,ishft,it,ix1,ix2c,ix3c,ix2,ix3,i,j
+      integer nx2,nx3,nt,nom,iom,mwid,nord,nreal
+      integer icomp,iform,ishft,ix1,ix2c,ix3c,ix2,ix3,i,j
       integer iflag(6),k2vec(2)
 
-      real*8 dx,dx1,dx2,dx3,x2c,x3c,x2,x3,rnx,half,h2
+      real*8 dx,dx2,dx3,x2c,x3c,x2,x3,rnx,half,h2
       real*8 dt,tc,omn,om,delom,ttot,time,tshift
-      real*8 pi,pi2,rpeak,beta,vnor,cphi,sphi
+      real*8 pi,pi2,rpeak,cfreq,beta,vnor,cphi,sphi
       real*8 walpha,palpha,temp1,temp2,temp3,temp4,temp7,temp8
       real*8 theta,dtheta,phi,dphi,dpx,dpy,pxwid,pywid
       real*8 thran1,thran2,phran1,phran2
       real*8 p1c,p2c,p3c,p2,p3,p22,p23,p32,p33
-      real*8 phimx,phimn,thetamx,thetamn,thetmx,thetmn,thet2
+      real*8 phimx,phimn,thetmx,thetmn,thet2
       real*8 del1,del2,del3,del4
       real*8 p2mxp,p2mnp,p3mxp,p3mnp,p2mxt,p2mnt,p3mxt,p3mnt
       real*8 sign2,sign3,sdot,atmp,btmp,ctmp,disp1,disp2,disp3
 
       real*8 tinc(nx2mx,nx3mx),p1inc(3,nx2mx,nx3mx),
      +     p2inc(3,nx2mx,nx3mx),p3inc(3,nx2mx,nx3mx)
-      real*8 a6(6,6,nx3mx,nx2mx,nx1sto),wvf0(ntmx)
-      real*8 a(6,6),a3r(3,3,3,3),a3iso(3,3,3,3)
+      real*8 a6(6,6,nx3mx,nx2mx,nx1sto)
+      real*8 a(6,6),a3r(3,3,3,3)
       real*8 vn(3),p(3,3),vg(3,3),px1(3),wn(3)
       real*8 p2ran(2),p3ran(2),eval(6),evec(6,6)
       real*8 sigvec(3),sigvec1(3,nx3mx)
@@ -51,9 +51,10 @@ c***********************************************************************
       complex*16 ai,ctemp
       complex*16 uvec(3,ntmx,nx3mx,nx2mx,3)
       complex*16 px1c(6)
+      real*4 amax
       complex*8 cfilt(ntmx) 
 
-      real*4 singpi,omegai,sdelom,sdt,srpeak
+      real*4 singpi,omegai,sdelom,sdt,srpeak,scfreq
 
       if(nx2.gt.nxmx.or.nx3.gt.nxmx)then
          write(11,*)
@@ -78,7 +79,9 @@ c     Time and elasticity at grid center
 
       do i=1,6
          do j=1,6
-            a(i,j)=a6(i,j,ix3c,ix2c,ix1)
+            if(inhomog.ne.2)a(i,j)=a6(i,j,ix3c,ix2c,ix1)
+c     Frequency dependent elasticity (zero frequency real)
+            if(inhomog.eq.2)a(i,j)=dble(realpart(aw6(i,j,1)))
          enddo
       enddo
 
@@ -534,7 +537,6 @@ c     in the direction of propagation)
                            write(11,*)'Setincid error 1: nreal,atmp=',
      +                          nreal,atmp,' (stopping)'
                            write(*,*)'ix2,ix3,nreal',ix2,ix3,nreal
-c                           pause
                            stop
                         endif
                      else
@@ -542,7 +544,6 @@ c                           pause
                         write(11,*)'lt 3 at (ix2,ix3)=',ix2,ix3
                         write(11,*)' (stopping)'
                         write(*,*)'ix2,ix3,nreal',ix2,ix3,nreal
-c                        pause
                         stop
                      endif
 
@@ -673,18 +674,27 @@ c     the frequency domain for ease ...
                      sdelom=sngl(delom)
                      sdt=sngl(dt)
                      srpeak=sngl(rpeak)
+                     scfreq=sngl(cfreq)
                      ai=dcmplx(0.d0,1.d0)
 c     Set up sinc**nord filter in omega domain (i.e. boxcar
 c     convolved with itself nord times in the time domain,
 c     the width of the boxcar is 2*mwid time samples)
                      omegai=0.0 ! frequency is real in this code 
                      if(iricker.eq.0)then
-                        call scsinc(singpi,nt,nom,mwid,nord,omegai,
+c                        call scsinc_old(singpi,nt,nom,mwid,nord,omegai,
+c     +                       cfilt)
+                        call scsinc(nt,nom,mwid,nord,sdt,sdelom,singpi,
      +                       cfilt)
                      elseif(iricker.eq.1)then
-                        call rickerw(nt,sdt,nom,sdelom,singpi,cfilt,
+                        call rickerw(sdt,nom,sdelom,singpi,cfilt,
      +                       srpeak)
+                     elseif(iricker.eq.2)then
+                        call beresnev(sdt,nom,sdelom,singpi,cfilt,scfreq)
                      endif
+                     call getnorm(nom,singpi,cfilt,amax)
+                     do iom=1,nt
+                        cfilt(iom)=cfilt(iom)/amax
+                     enddo
                   endif
 
 c     Also apply a constant overall time shift, as the smoothed 
@@ -731,7 +741,7 @@ c     et. al.
 c***********************************************************************
 
       implicit none
-      include '../Input/narc_dp.par'
+      include 'narc_dp.par'
 
       integer npts,igrid,ipt
       real*8 alen,alen2,xbar,dxbr,ybar,fac2,fac3,beta,pi
@@ -819,7 +829,7 @@ c     Note that coordinate ybar here is measured down from upper end
       end
 
 c***********************************************************************
-      subroutine scsinc(spi,nt,nomega,mwid,nord,somegai,cfilt)
+      subroutine scsinc(nt,nomega,mwid,nord,dt,delom,spi,cfilt)
 c     This subroutine creates the waveform pulse:
 c     nomega = nt/2 + 1 - redundant information but good as a check
 c     mwid   = 0.5*(width of time-domain boxcar) (i.e. mwid=1 means a 
@@ -829,47 +839,89 @@ c     Copyright (c) 2000 C. J. Thomson - all rights reserved by author.
 c***********************************************************************
 
       implicit none
-      include '../Input/narc_dp.par'
+      include 'narc_dp.par'
 
-      integer nt,nomega,mwid,nord,iom
-      real*4 spi,somegai,stemp
-      complex*8 cfilt(ntmx),arg
+      integer it,nt,nomega,mwid,nord,iom,ideriv
+      real*4 spi,stemp,stshift,crmax,om,dt,delom,comegai
+      complex*8 cfilt(ntmx),arg,ai
+
+      do it=1,nt
+         cfilt(it)=cmplx(0.0,0.0)
+      enddo
+
+      ai=cmplx(0.0,1.0)
+      comegai=0.0
+
+      ideriv=3
+      if(ideriv.lt.3)then
+         nord=4
+         mwid=2
+      else
+         nord=3
+         mwid=2
+      endif
+      
+      stshift=real(mwid+1)*2.0*dt
 
 c     Sinc filter for complex frequency
-      
-      if(nomega.ne.(nt/2+1))write(11,*)'***ERROR in scsinc**'
+      if(nomega.ne.(nt/2+1))write(*,*)'***ERROR in scsinc**'
 
-      cfilt(1)=cmplx(1.0,0.0)
-
-      do iom=2,nomega
-         stemp=2.0*spi*real(iom-1)*real(mwid)/real(nt)
-         arg=cmplx(0.0,1.0)*cmplx(stemp,somegai)
-         if(stemp.ge.spi)then
-            cfilt(iom)=cmplx(0.0,0.0)
+      crmax=-1.e20
+      om=-delom
+      open(90,file='./Output/wavelet_Sinc.txt')
+      do iom=1,nomega
+         om=real(iom-1)*delom
+         if(iom.eq.1)then
+            cfilt(1)=cmplx(1.0,0.0)
          else
-            cfilt(iom)=(cexp(arg)-cexp(-arg))/2.0/arg
-            cfilt(iom)=cfilt(iom)**nord 
+            stemp=2.0*spi*real(iom-1)*real(mwid)/real(nt)
+            arg=cmplx(0.d0,1.0)*cmplx(stemp,comegai)
+            if(stemp.ge.spi)then
+               cfilt(iom)=cmplx(0.0,0.0)
+            else
+               cfilt(iom)=(cexp(arg)-cexp(-arg))/2.0/arg
+               cfilt(iom)=cfilt(iom)**nord 
+            endif
          endif
+         if(ideriv.eq.1)cfilt(iom)=ai*om*cfilt(iom)
+         if(ideriv.eq.2)cfilt(iom)=-ai*ai*om*om*cfilt(iom)
+         if(ideriv.eq.3)then
+            cfilt(iom)=ai*sign(1.0,om)*cfilt(iom)
+            cfilt(iom)=-ai*sign(1.0,om)*cfilt(iom)
+         endif
+         crmax=max(crmax,abs(cfilt(iom)))
+         write(90,*)om/(2.0*spi),real(cfilt(iom)),aimag(cfilt(iom))
       enddo
+      close(90)
 
       return
       end
 
 c***********************************************************************
-      subroutine rickerw(nt,sdt,nom,sdelom,spi,cfilt,srpeak)
+      subroutine rickerw(sdt,nom,sdelom,spi,cfilt,srpeak)
 c     This subroutine creates a Ricker waveform in the frequency domain.
 c     nom = nt/2 + 1 - redundant information but good as a check.
 c***********************************************************************
 
       implicit none
-      include '../Input/narc_dp.par'
+      include 'narc_dp.par'
 
-      integer ideriv,nt,nom,iom,iwp
-      real*4 sdt,sdelom,spi,srpeak,rhz,fn,omn,fp,omp,td,tr,om
-      complex*8 cfilt(ntmx),arg,ai
+      integer ideriv,nom,iom,iwp,it,nt,ibandwidth
+      real*4 sdt,sdelom,spi,srpeak,rhz,fn,omn,fp,omp,omp2,omp3,td,tr,
+     +     om,ampmax
+      complex*8 cfilt(ntmx),arg,arg2,arg3,ai
+
+c      ibandwidth=0
+      ibandwidth=1
+
+      nt=(nom-1)*2
+      do it=1,nt
+         cfilt(it)=cmplx(0.0,0.0)
+      enddo
       
       ai=cmplx(0.0,1.0)
       ideriv=0
+      ampmax=0.0
 
       rhz=2.0*spi                !Conversion from radians to Hz
       fn=1.0/(2.0*sdt)
@@ -882,6 +934,8 @@ c     Set peak frequency to approximately rpeak (%) of Nyquist frequency
       else
          fp=srpeak
          omp=fp*rhz
+         omp2=0.5*omp
+         omp3=1.25*omp
       endif
 
       iwp=int(omp/sdelom)
@@ -904,19 +958,127 @@ c     Set peak frequency to approximately rpeak (%) of Nyquist frequency
       write(*,*)'             Pulse width (s):',td
       write(*,*)
 
+      open(90,file='./Output/wavelet_Ricker.txt')
       do iom=1,nom
          om=real(iom-1)*sdelom
          if(iom.eq.1)then
             cfilt(iom)=cmplx(0.0,0.0)
          else
             arg=cmplx((om/omp)**2.0,0.0)
+            arg2=cmplx((om/omp2)**2.0,0.0)
+            arg3=cmplx((om/omp3)**2.0,0.0)
             if(ideriv.eq.0)then
-               cfilt(iom)=(2.0/sqrt(spi))*arg*cexp(-arg)
+               if(ibandwidth.eq.0)
+     +              cfilt(iom)=(2.0/sqrt(spi))*arg*cexp(-arg)
+               if(ibandwidth.eq.1)
+     +              cfilt(iom)=(2.0/sqrt(spi))*arg*cexp(-arg)+
+     +              0.5*(2.0/sqrt(spi))*arg2*cexp(-arg2)+
+     +              0.5*(2.0/sqrt(spi))*arg3*cexp(-arg3)
+
             elseif(ideriv.eq.1)then
-               cfilt(iom)=ai*om*(2.0/sqrt(spi))*arg*cexp(-arg)
+               if(ibandwidth.eq.0)
+     +              cfilt(iom)=ai*om*(2.0/sqrt(spi))*arg*cexp(-arg)
+               if(ibandwidth.eq.1)
+     +              cfilt(iom)=ai*om*(2.0/sqrt(spi))*arg*cexp(-arg)+
+     +              0.5*ai*om*(2.0/sqrt(spi))*arg2*cexp(-arg2)+
+     +              0.5*ai*om*(2.0/sqrt(spi))*arg3*cexp(-arg3)
             endif
          endif
+         ampmax=max(ampmax,abs(cfilt(iom)))
       enddo
+      do iom=1,nom
+c         cfilt(iom)=cfilt(iom)/ampmax
+         write(90,*)om/(2.0*spi),real(cfilt(iom)),aimag(cfilt(iom))
+      enddo
+      close(90)
+
+      return
+      end
+
+c***********************************************************************
+      subroutine beresnev(sdt,nom,sdelom,spi,cfilt,scfreq)
+c     This subroutine creates a Ricker waveform in the frequency domain.
+c     nom = nt/2 + 1 - redundant information but good as a check.
+c***********************************************************************
+
+      implicit none
+      include 'narc_dp.par'
+
+      integer nom,iom,nt,it
+      real*4 sdt,sdelom,spi,scfreq,rhz,fn,omn,fp,omp,td,om,tau
+      complex*8 cfilt(ntmx),ai
+
+      nt=(nom-1)*2
+      do it=1,nt
+         cfilt(it)=cmplx(0.0,0.0)
+      enddo
+
+      ai=cmplx(0.0,1.0)
+
+      rhz=2.0*spi                !Conversion from radians to Hz
+      fn=1.0/(2.0*sdt)
+      omn=2.0*spi*fn
+
+      fp=scfreq
+c      fp=0.9*fp
+      omp=2.0*spi*fp
+      tau=1.0/omp
+
+      write(*,*)
+      write(*,*)'             wn Beresnev wavelet (Beresnev 2002 BSSA):'
+      write(*,*)'             Corner freq.:',omp,' (rads) or ',fp,' Hz.'
+      write(*,*)'             Nyq. freq.:',omn,' (rads) or',fn,' Hz.'
+      write(*,*)'             -> fp=',(fp/fn)*100.0,' % of fn.'
+      write(*,*)'             Max. freq.:',real(nom)*sdelom/rhz,' Hz.'
+      write(*,*)'             Pulse width (s):',td
+      write(*,*)
+
+      open(90,file='./Output/wavelet_Beresnev.txt')
+      do iom=1,nom
+         om=real(iom-1)*sdelom
+         cfilt(iom)=1.0/(1.0 + (om*tau)**2.0)
+         write(90,*)om/(2.0*spi),real(cfilt(iom)),aimag(cfilt(iom))
+      enddo
+      close(90)
+
+      return
+      end
+
+c***********************************************************************
+      subroutine getnorm(nom,spi,cfilt,amax)
+c     This subroutine finds the max absolute amplitude to normalize 
+c     sprectrum so that the time series has maximum unit amplitude.
+c***********************************************************************
+
+      implicit none
+      include 'narc_dp.par'
+
+      integer it,nt,iom,nom,isign
+      real*4 amax,spi
+      complex*8 cfilt(ntmx)
+      real*8 wmax,work
+      complex*16 work1(ntmx)
+
+      nt=(nom-1)*2
+      wmax=0.d0
+      do iom=1,nom
+         if(iom.le.nom)then
+            work1(iom)=dcmplx(cfilt(iom))
+         else
+            work1(iom)=dcmplx(0.d0,0.d0)
+         endif
+         if(iom.gt.1.and.iom.lt.nom)then
+            work1(nt+2-iom)=dconjg(work1(iom))
+         endif
+      enddo
+
+      isign=-1
+      call FOUR1(work1,nt,isign)
+      do it=1,nt
+         work=realpart(work1(it))/dble(nt)
+         wmax=max(wmax,dabs(work))
+      enddo
+      amax=sqrt(spi)*sngl(wmax)/2.0
 
       return
       end

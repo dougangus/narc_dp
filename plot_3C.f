@@ -7,7 +7,7 @@ c  Mytext1, Textl, Mytext2, and Grclse2.
 c
 c  Copyright (c) 2006 D.A. Angus.
 c  All rights reserved by the author(s).
-c  Last modified: October 17, 2006.
+c  Last modified: April 19, 2012.
 c***********************************************************************
       program plot_3C
 c***********************************************************************
@@ -34,7 +34,7 @@ c***********************************************************************
 
       character*80 xtext,ytext,ctext
       character*6 chfmx,chfmy
-      character*1 ansm,answer1,answer2,answer3
+      character*1 ansm,answer2,answer3
 
       dimension nta(nx2mx,nx3mx)
       dimension ix2pt(ntracwmx),ix3pt(ntracwmx)
@@ -91,17 +91,15 @@ c      open(24,file='./FP_Study_Results/wavefld.out',form='unformatted')
 
  11   write(*,*)
       write(*,*)'The following planes are stored within input file:'
-      write(*,*)
       do im=1,ilast
 c         write(*,*)'Tag:',im,' ix1:',iplanes(im),' x1:',
 c     +        x1o+real(iplanes(im)-1)*dx1,' m.'
          write(*,666)a1text,im,a2text,iplanes(im),a3text,
-     +        x1o+dreal(iplanes(im)-1)*dx1,a4text
+     +        x1o+dble(iplanes(im)-1)*dx1,a4text
       enddo
  666  format(1x,a,i6,a,i6,a,f9.2,a)
       write(*,*)
       write(*,*)'Select plane to view based on tag integer value.'
-      write(*,*)
       read(*,*)iplane
 
 c     Read frequency-domain wavefield
@@ -110,10 +108,7 @@ c     Read frequency-domain wavefield
          read(24)jx1,nx1,nx2,nx3
          read(24)nt,dt,nom,nom2
          if(ip.eq.iplane.and.iprompt.eq.1)then
-            write(*,*)
             write(*,*)'Plane being viewed is:',jx1,' .'
-c            write(*,*)'Continue?'
-c            read(*,*)
          endif
          do ix2=1,nx2
             do ix3=1,nx3
@@ -126,13 +121,12 @@ c            read(*,*)
          enddo
       enddo
       write(*,*)'Finished reading wavefield array.'
-      write(*,*)
       close(24)
 
 c     Determine frequency content information
 
       omc=1.d0/(2.d0*dt)              !Nyquist frequency
-      tott=dreal(nt)*(dt)            !time series record length
+      tott=dble(nt)*(dt)            !time series record length
       delom=1.d0/tott                !frequency step length
 
       if(iprompt.eq.0)then
@@ -149,7 +143,7 @@ c     Determine frequency content information
          ilow=1
          ihigh=nom
          call taper(nom2,iomc1,ilow,ihigh,iomc4,ifilttype,rfilt)
-         write(*,*)dreal(ilow-1)*delom,dreal(ihigh-1)*delom,' Hz.'
+         write(*,*)dble(ilow-1)*delom,dble(ihigh-1)*delom,' Hz.'
          xshift=0.d0
 c         xshift=(tnd(1,1)-tbg(1,1))*xshift/100.d0
          iorder=0
@@ -166,43 +160,30 @@ c         write(*,*)
          iskip=1    !Doesn't work as setup . due to FFT 2n requirement
          mnt=nt
          write(*,*)'Select amplitude scaling for traces.'
-         write(*,*)
          read(*,*)scalea
-         write(*,*)
 c     Read in the user selected grid points to be viewed.
          write(*,*)'Would you like to view a row of grid points?'
          write(*,*)'(yes=y,no=n)'
-         write(*,*)
          read(*,*)answer2
          if(answer2.eq.'y'.or.answer2.eq.'Y')then
-            write(*,*)
             write(*,*)'To view x2 from 1 to nx2 enter 2.'
             write(*,*)'Or to view x3 from 1 to nx3 enter 3.'
-            write(*,*)
             read(*,*)ians2
-            write(*,*)
             write(*,*)'Avoid plotting outer traces - enter margin value'
             write(*,*)'(for all traces enter 0).'
-            write(*,*)
             read(*,*)iedge
             if(ians2.eq.2)then
                ntracw=nx2-2*iedge
-               write(*,*)
                write(*,*)'Enter x3 coordinate.'
-               write(*,*)
                read(*,*)ix3
-               write(*,*)
                do i=1,nx2-2*iedge
                   ix2pt(i)=i+iedge
                   ix3pt(i)=ix3
                enddo
             elseif(ians2.eq.3)then
                ntracw=nx3-2*iedge
-               write(*,*)
                write(*,*)'Enter x2 coordinate.'
-               write(*,*)
                read(*,*)ix2
-               write(*,*)
                do i=1,nx3-2*iedge
                   ix3pt(i)=i+iedge
                   ix2pt(i)=ix2
@@ -213,11 +194,9 @@ c     Read in the user selected grid points to be viewed.
                stop
             endif
          elseif(answer2.eq.'n'.or.answer2.eq.'N')then
-            write(*,*)
             write(*,*)'Input number grid point waveforms to be viewed.'
             write(*,*)'(maximum is ',ntracwmx,' .)'
             read(*,*)ntracw
-            write(*,*)
             write(*,*)'Grid waveforms to be viewed are: ',ntracw,' .'
             write(*,*)'Enter the specific grid points to be viewed.'
             write(*,*)'(ix2,ix3 enter).'
@@ -226,7 +205,6 @@ c     Read in the user selected grid points to be viewed.
                if(i.eq.ntracw)write(*,*)'Last point: ',i
                read(*,*)ix2pt(i),ix3pt(i)
                write(*,*)'Point: ',i,' = (',ix2pt(i),',',ix3pt(i),' )'
-               write(*,*)' '
  70         continue
          else
             write(*,*)
@@ -235,7 +213,6 @@ c     Read in the user selected grid points to be viewed.
          endif 
 
  222     write(*,*)'Do you want to filter the data?'
-         write(*,*)
          read(*,*)answer3
 
          if(answer3.eq.'y'.or.answer3.eq.'Y')then
@@ -254,7 +231,6 @@ c     Read in the user selected grid points to be viewed.
          imargin=3
 
          if(ifilt.eq.1)then
-            write(*,*)
             write(*,*)'The number of frequency samples is:',int(rt),' .'
             write(*,*)'The frequency increment is:',delom,' Hz.'
             write(*,*)'Nyquist frequency (maximum) is:',omc,' Hz.'
@@ -265,13 +241,11 @@ c     Read in the user selected grid points to be viewed.
             if(ifilttype.eq.1)then
                ilow=1
                iomc1=ilow
-               write(*,*)
                write(*,*)'Enter integer value of highest frequency.'
                write(*,*)'Note: must between',imargin,' and ',nom2,' .'
                read(*,*)ihigh
                iomc4=ihigh+imargin
             elseif(ifilttype.eq.2)then
-               write(*,*)
                write(*,*)'Enter integer value of lowest and highest'
                write(*,*)'frequency: between',imargin,' and ',nom2,' .'
                read(*,*)ilow,ihigh
@@ -280,7 +254,6 @@ c     Read in the user selected grid points to be viewed.
             elseif(ifilttype.eq.3)then
                ihigh=nom2
                iomc4=ihigh
-               write(*,*)
                write(*,*)'Enter integer value of lowest frequency.'
                write(*,*)'Note: must between',imargin,' and ',nom2,' .'
                read(*,*)ilow
@@ -288,7 +261,6 @@ c     Read in the user selected grid points to be viewed.
             elseif(ifilttype.eq.4)then
                iomc1=1
                iomc4=nom2
-               write(*,*)
                write(*,*)'Enter integer val of lowest and highest notch'
                write(*,*)'in frequency.  Note: must be between',imargin
                write(*,*)' and',nom2,' .'
@@ -303,20 +275,15 @@ c     Read in the user selected grid points to be viewed.
 
          call taper(nom2,iomc1,ilow,ihigh,iomc4,ifilttype,rfilt)
 
-         write(*,*)
          write(*,*)'Frequency band is (low,high):'
-         write(*,*)dreal(ilow-1)*delom,dreal(ihigh-1)*delom,' Hz.'
+         write(*,*)dble(ilow-1)*delom,dble(ihigh-1)*delom,' Hz.'
 
-         write(*,*)
          write(*,*)'Enter phase shift (in %) for waveform display'
          write(*,*)'(right-left: + and left-right: -1).'
-         write(*,*)
          read(*,*)xshift
          xshift=(tnd(1,1)-tbg(1,1))*xshift/100.0
 
-         write(*,*)
          write(*,*)'Choose trace ordering (0: normal and 1: reverse)'
-         write(*,*)
          read(*,*)iorder
          if(iorder.eq.0)then
             istart=1
@@ -376,9 +343,9 @@ c     Call to inverse fft to bring data into time-domain
 
          do 100 it=1,nt
 
-            uvec(1,it,ntrac)=realpart(work1(it))/dreal(nt)
-            uvec(2,it,ntrac)=realpart(work2(it))/dreal(nt)
-            uvec(3,it,ntrac)=realpart(work3(it))/dreal(nt)
+            uvec(1,it,ntrac)=realpart(work1(it))/dble(nt)
+            uvec(2,it,ntrac)=realpart(work2(it))/dble(nt)
+            uvec(3,it,ntrac)=realpart(work3(it))/dble(nt)
 
  100     continue 
 
@@ -395,7 +362,7 @@ c      close(10)
 
 c     Find scaling for plotting from 1st level amplitudes
 
- 699  if(ntrac.eq.ntracw)then 
+      if(ntrac.eq.ntracw)then 
 
          smaxx=0.0
          smaxy=0.0
@@ -415,9 +382,9 @@ c         do 2001 irec=1,ntracw
                smaxz0=amax1(smaxz0,sngl(dabs(uvec(3,ipts,irec))))
  2002       continue
 
-            write(*,*)
-            write(*,*)'irec=',irec,' smaxx,y,z: ',smaxx0,smaxy0,
-     +           smaxz0
+c            write(*,*)
+c            write(*,*)'irec=',irec,' smaxx,y,z: ',smaxx0,smaxy0,
+c     +           smaxz0
 
             smaxx=amax1(smaxx,smaxx0)
             smaxy=amax1(smaxy,smaxy0)
@@ -1096,6 +1063,7 @@ c***********************************************************************
       subroutine mytext2(xtext,ytext,chfm1,chfm2,ianotx,ianoty,nseg)
 c***********************************************************************
 
+      integer inxt,inyt
       real xmin,xmax,ymin,ymax
       real ndx,ndy,nxt,nyt,tick
 
@@ -1196,7 +1164,8 @@ c     Polyline frame
 
 c     Plot y-axis
 
-      do 60 i=0,nyt
+      inyt=int(nyt)
+      do i=0,inyt
 
          yt(1)=float(i)*ndy+ymin
          yt(2)=yt(1)
@@ -1220,12 +1189,12 @@ c     Set text alignment
             call gstxal(3,3)
             if(ianoty.ne.0)call gtx(xtx,yt(1),chnum(1:jleny))
          endif
-
- 60   continue
+      enddo
 
 c     Plot x-axis
 
-      do 50 i=0,nxt
+      inxt=int(nxt)
+      do i=0,inxt
          xt(1)=float(i)*ndx+xmin
          xt(2)=xt(1)
          ytt(1)=ymax
@@ -1251,8 +1220,7 @@ c     Set text alignment
          if(nseg.eq.2)then
             if(ianotx.ne.0)call gtx(xt(1),ytx,chnum(1:jlenx))
          endif
- 50   continue
-
+      enddo
 c     Write axis text
 
 c     Set character height for axis text

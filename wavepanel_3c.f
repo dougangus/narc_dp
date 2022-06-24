@@ -7,35 +7,45 @@ c  Dfclrs, and Bndary2.
 c
 c  Copyright (c) 2005 D. A. Angus & C. J. Thomson.
 c  All rights reserved by the authors.
-c  Last modified: December 5, 2006.
+c  Last modified: Apr. 3, 2005.
 c***********************************************************************
 
 c     Variable initialisation.
 
       implicit real*4 (a-h,o-z)
 
+c      parameter (ntmx=33,ntrmx=33,nx1mx=5)
       parameter (ntmx=257,ntrmx=129,nx1mx=5)
+c      parameter (ntmx=400,ntrmx=400,nx1mx=5)
+c      parameter (nx2mx=64,nx3mx=64)
+c      parameter (nx2mx=33,nx3mx=33)
+c      parameter (nx2mx=151,nx3mx=151)
       parameter (nx2mx=201,nx3mx=201)
       parameter (ntracwmx=201)
 
       integer unit1,unit2
 
-      real*8 uvec(3,ntmx,ntrmx),rfilt(ntmx)
-      real*8 dt,pi,tott,om,delom,dx1,x1o,omc,xshift
+      real*8 uvec(3,ntmx,ntrmx),dt,pi,tott
+      real*8 rfilt(ntmx),xshift,om,delom,omc
+      real*8 tbeg(ntrmx),tend(ntrmx)
       real*8 tbg(nx2mx,nx3mx),tnd(nx2mx,nx3mx)
 
-      real*4 tbeg(ntrmx),tend(ntrmx)
+      real*4 xfun(ntmx),yfun1(ntmx)
       real*4 wxmax,wxmin,wymax,wymin,wdx,wdy
       real*4 xmax,xmin,ymax,ymin
 
-      complex*16 uvc(3,ntmx,nx3mx,nx2mx),work1(ntmx),
-     +     cxshift,ai
+      complex*16 uvc(3,ntmx,nx3mx,nx2mx),work1(ntmx),work2(ntmx),
+     +     work3(ntmx),cxshift,ai
 
-      character*1 ansm,answer3
+      character*80 xtext,ytext,ctext
+      character*6 chfmx,chfmy
+      character*1 ansm,answer1,answer2,answer3
 
       dimension nta(nx2mx,nx3mx),nta2(ntrmx)
-      dimension ix2pt0(ntracwmx), ix2pt1(ntracwmx),
-     .          ix3pt0(ntracwmx), ix3pt1(ntracwmx)
+      dimension ix2pt(ntracwmx),ix3pt(ntracwmx)
+      dimension ix2pt0(ntracwmx), ix2pt1(ntracwmx), ix2pt2(ntracwmx),
+     .          ix2pt3(ntracwmx), ix3pt0(ntracwmx), ix3pt1(ntracwmx), 
+     .          ix3pt2(ntracwmx), ix3pt3(ntracwmx)
       dimension iplanes(100)
 
       common/wcord/wxmax,wxmin,wymax,wymin,wdx,wdy
@@ -70,7 +80,7 @@ c define the center of the title string in a 0. to 1. range.
 
 c     Open input/output files.
 
-      open(unit=24,file='./Output/wavefld.out',form='unformatted')
+      open(unit=24,file='wavefld.out',form='unformatted')
 
       pi=4.d0*datan(1.d0)
       spi=sngl(pi)
@@ -79,7 +89,6 @@ c     Open input/output files.
 c     Decide which plane to view
 
       read(24)inumber,istart,increment,nx1
-      read(24)dx1,x1o
 
       do im=1,inumber+2
 
@@ -151,12 +160,12 @@ c     Read frequency-domain wavefield
 c     Determine frequency content information
 
       omc=1.d0/(2.d0*dt)            !Nyquist frequency
-      tott=dble(nt)*(dt)           !time series record length
+      tott=dreal(nt)*(dt)           !time series record length
       delom=1.d0/tott               !frequency step length
 
 c     Read in the user selected grid points to be viewed.
 
-         write(*,*)
+111      write(*,*)
          write(*,*)'Primary receiver coordinate definition:'
          write(*,*)'To view x2 from 1 to nx2 enter 2.'
          write(*,*)'Or to view x3 from 1 to nx3 enter 3.'
@@ -260,7 +269,7 @@ c     Read in the user selected grid points to be viewed.
 
       write(*,*)
       write(*,*)'Frequency band is (low,high):'
-      write(*,*)dble(ilow-1)*delom,dble(ihigh-1)*delom,' Hz.'
+      write(*,*)dreal(ilow-1)*delom,dreal(ihigh-1)*delom,' Hz.'
 
       write(*,*)
       write(*,*)'Enter phase shift (in %) for waveform display .'
@@ -282,6 +291,7 @@ c     Selection of the wanted wavefields.
 
 c     Loop on the three `columns'
 
+c      ampmax=0.15
       ampmax=0.0
       iktemp=0
       do 1111 icol=1,3
@@ -353,47 +363,13 @@ c     Note storing in uvec(1)
 
  90      continue
 
-c     Find scaling for plotting from 1st level amplitudes
-
-         if(ntrac.eq.ntracw)then 
-
-            smaxx=0.0
-            smaxa=0.0
-            
-            do 2001 irec=1,ntracw
-               
-               smaxx0=0.0
-               
-               do 2002 ipts=1,nt
-                  smaxx0=amax1(smaxx0,sngl(dabs(uvec(1,ipts,irec))))
- 2002          continue
-
-c               write(*,*)
-c               write(*,*)'irec=',irec,' smaxx: ',smaxx0
-
-               smaxx=amax1(smaxx,smaxx0)
-               smaxa=amax1(smaxa,smaxx)
-               
- 2001       continue
-
-c            write(*,*)
-c            write(*,*)' smaxx, smaxa: ',smaxx,smaxa
-c            write(*,*)
-            
-         endif
-
-         if(icol.eq.3.and.iktemp.eq.0)then
-            ampmax=smaxa
-            iktemp=1
-         endif
-
          IFR=0
          IDRY=0
          IUPPER=1
 
-c     SRFACE SECTION  
-
          ampmax=0.15
+
+c     SRFACE SECTION  
 
 c     Read data
 
@@ -407,13 +383,12 @@ c     Read data
  100        continue
  99      continue
 
-         zmax=ampmax
          zmax=zmax*8.0
 
          do 101 it=1,nt
             do 102 jt=1,ntracw
 c               Z1(jt+ntracw*(it-1))=Z1(jt+ntracw*(it-1))/zmax
-               Z1(jt+ntracw*(it-1))=zmax*Z1(jt+ntracw*(it-1))/ampmax
+               Z1(jt+ntracw*(it-1))=Z1(jt+ntracw*(it-1))/(ampmax*8.0)
  102        continue
  101     continue
 
@@ -556,7 +531,7 @@ c     Close GKS.
 
       CALL GRCLSE(ANSM,UNIT1,UNIT2)
 
-      stop
+ 69   stop
       end
 
 c***********************************************************************
@@ -612,10 +587,8 @@ c     OPEN AND ACTIVATE POSTSCRIPT DEVICE
 c         CALL GOPWK(4,UNIT2,10)
 c         CALL GACWK(4)
 
-c         call NGSETC('ME','./Output/wavepanel_3c.ps')
-c         CALL GOPWK(2,2,20)
-         CALL NGSETC('ME','./Output/plot_3C3D.eps')
-         CALL GOPWK(2,2,21)
+         call NGSETC('ME','wavepanel_3c.ps')
+         CALL GOPWK(2,2,20)
          CALL GACWK(2)
 
 c     AND WISS FOR SEGMENTS

@@ -1,0 +1,40 @@
+c File Narc.par is the parameter file for Narc
+c
+c Last modified: April 16, 2012.
+c...+....|....+....|....+....|....+....|....+....|....+....|....+....|..
+
+      integer nx1sto,nx2mx,nx3mx,ntmx,nommx,nxmx
+c      parameter (nx1sto=5,nx2mx=100,nx3mx=100,ntmx=128)
+      parameter (nx1sto=5,nx2mx=100,nx3mx=100,ntmx=1024)
+      parameter (nommx=ntmx/2+1,nxmx=nx2mx)
+      real*8 pi4
+      parameter (pi4=0.7853981634)
+
+      character*100 modelcart_e,waveout
+
+      integer itropic,iuse,ielas,ieff,inhomog,ianalyt,iwave,iricker
+      integer imodel,jmodel,iopt,imargin,jmargin,ipol,nplane
+      integer ncx1,ncx2,ncx3,imtrick,inumber,istart,increment
+
+      real*8 alpha1,beta1,gamma1,alpha2,beta2,gamma2
+      real*8 vfast,vslow,den
+      real*8 tmax,tmin,tint
+      real*8 x1o,x2o,x3o,xtrans,ztrans
+      real*8 dcx1,dcx2,dcx3
+      real*8 xwor(nxmx)
+      real*8 s1phi
+      complex*8 aw6(6,6,ntmx)
+
+      common /flag/itropic,iuse,ielas,ieff,inhomog,ianalyt,imodel,
+     .             iwave,iricker
+      common /rotang/alpha1,beta1,gamma1,alpha2,beta2,gamma2
+      common /rock/vfast,vslow,den
+      common /outfile/inumber,istart,increment
+      common /extrp/tmax,tmin,tint,iopt
+      common /vgrd/xwor
+      common /margins/imargin,jmargin
+      common /inoutfile1/modelcart_e,waveout
+      common /analyt/x1o,x2o,x3o,xtrans,ztrans,jmodel
+      common /trick/dcx1,dcx2,dcx3,ncx1,ncx2,ncx3,imtrick
+      common /s1pol/s1phi,ipol,nplane
+      common /frelas/aw6

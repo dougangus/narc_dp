@@ -1,0 +1,7 @@
+gfortran -fbounds-check -ffixed-line-length-none -Wall -o ../Bin/panel_3C3D panel_3C3D.f surface.f \
+-L/usr/local/lib -L/usr/X11R6/lib -L/usr/local/lib  \
+-lncarg -lncarg_gks -lncarg_c -lX11 -lm
+
+
+
+

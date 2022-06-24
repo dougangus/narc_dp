@@ -6,31 +6,26 @@ c  in a phase shifting scheme.
 c
 c  Last modified: April 17, 2012.
 c***********************************************************************
-      subroutine extrcart(nt,dt,omwin,nx1st,nx1,dx1,nx2,dx2,nx3,dx3,a6,
-     +     uvec,iref,p2inc,p3inc)
+      subroutine extrcart_sac(nt,dt,omwin,nx1st,nx1,dx1,nx2,dx2,nx3,dx3,
+     +     a6,uvec,iref,p2inc,p3inc)
 c***********************************************************************
 
       implicit none
       include 'narc_dp.par'
 
       integer nx1st,nx1,nx2,nx3,ix1,jx1,jx2,jx3,kx1a,kx1b,kx1c
-      integer nt,it,nom,nom2,iom,kom,iomc1,iomc2,ic,jc,kc
-      integer itmp,ik,iref,iout,im,joption,iphase,nx1inc,imult
-      character*17 a1text
-      character*4 a2text
+      integer nt,it,nom,nom2,iom,kom,iomc1,iomc2,ic,jc,kc,joption
+      integer itmp,ik,iref,iout,im,iout2,i,j,kx2
+      character a2text*4,string*5,a1text*17,elasname*19
 
       real*8 dt,tott,om,omk,omn,omwin,delom
-      real*8 pi,dx,dx1,dx2,dx3,tx1,x1step,root2,vel,dsx1
+      real*8 pi,dx,dx1,dx2,dx3,tx1,x1step,root2,vel
       real*8 phas,phas1,phas2,pphas1,pphas2,pphas,dpphas,slp,sls1,sls2
-      real*8 a3r(3,3,3,3),c11inv(3,3)
+      real*8 a3(3,3,3,3),a3r(3,3,3,3),c11inv(3,3)
       real*8 p0(3,3),p2(3,3),p3(3,3),p22(3,3),p23(3,3),p32(3,3),p33(3,3)
       real*8 a6(6,6,nx3mx,nx2mx,nx1sto)
       real*8 slonor(3,nx3mx,nx2mx),rfilt(ntmx)
       real*8 p2inc(3,nx2mx,nx3mx),p3inc(3,nx2mx,nx3mx)
-
-c     Temporary
-      real*8 l2trans
-c     Temporary
 
       complex*16 utmp1,utmp2,utmp3,utmp4,utmp5,utmp6
       complex*16 ai,egtmp1,egtmp2,egtmp3,u3bar,duvec
@@ -38,6 +33,10 @@ c     Temporary
      +     cp32(3,3),cp33(3,3),diag(3,3)
       complex*16 uvec(3,ntmx,nx3mx,nx2mx,3)
       complex*16 ctmp1(4*nx2mx),ctmp2(4*nx2mx),ctmp3(4*nx2mx)
+
+c  ** added by JW
+      character tfname*128 ! temporary filename
+      integer ifindex ! index count into direct access file
 
       if(nx2.gt.nxmx.or.nx3.gt.nxmx)then
          write(*,*)
@@ -60,10 +59,6 @@ c     Temporary
       nom=nt/2+1
       nom2=int(dble(nom-1)*omwin)+1
 
-      kx1a=1
-      kx1b=1
-      kx1c=1
-      x1step=dx1
       iomc1=1
       iomc2=1
       call rtaper(nom2,iomc1,iomc2,rfilt)
@@ -72,27 +67,13 @@ c     Temporary
          itmp=int(nx1/ncx1)
       endif
 
-c     Temporary
-      l2trans=5.d3/2.d0
+c     Temporary - JH - using joption 1 = plane wave, 0 = curved wavefront
       joption=0
-c     Temporary
-c     Temporary: (JH - joption 1 = plane wave, 0 = curved wavefront and
-c     DA - iphase 0 = normal propagation and 1 = prop with phase shift)
-      joption=0
-      write(*,*)'iphase option: 0 or 1?'
-      read(*,*)iphase
-c      iphase=0
-      if(iphase.eq.0)then
-         nx1inc=1
-      elseif(iphase.eq.1)then
-         imult=10
-         dsx1=imult*dx1-dx1
-         nx1inc=imult
-         istart=istart/imult
-         increment=increment/imult
-         nx1=nx1/imult
-      endif
-c     Temporary
+c     Temporaroy
+
+c  ** intialise the IFINDEX parameter 
+      ifindex = 1
+
 
       do 10 ix1=1,nx1
          if(ix1.eq.1)then
@@ -110,7 +91,6 @@ c     Temporary
 c     Loop over inner part of grid (not outer grid points)
          do 20 jx2=1,nx2
             do 30 jx3=1,nx3
-
                if(inhomog.eq.0.or.iuse.eq.1)then
                   if(ix1.eq.1.and.jx2.eq.1.and.jx3.eq.1)then
                      call aijkl(a6(1,1,jx3,jx2,jx1),a3r)
@@ -130,7 +110,6 @@ c     Loop over inner part of grid (not outer grid points)
                      slonor(ic,jx3,jx2)=p0(ic,ic)
                   enddo
                endif
-
                do ic=1,3
                   do jc=1,3
                      if(iref.eq.1)then
@@ -150,7 +129,8 @@ c     Loop over inner part of grid (not outer grid points)
                         cp23(ic,jc)=dcmplx(p23(ic,jc),0.d0)
                         cp32(ic,jc)=dcmplx(p32(ic,jc),0.d0)
 
-c     Temporary
+c     Temporary - Changed by JH - assuming plane waves
+
                         if(joption.eq.1)then
                            cp0(ic,jc)=dcmplx(p0(ic,jc),0.d0)
                            cp2(ic,jc)=dcmplx(p2(ic,jc),0.d0)
@@ -249,10 +229,8 @@ c     from the inner grid points
                            if(ic.eq.1.and.iom.eq.1)then
                               egtmp1=ctmp2(ik)/ctmp1(ik)
                               egtmp2=ctmp3(ik)/ctmp2(ik)
-                              phas1=datan2(dimag(egtmp1),
-     +                             realpart(egtmp1))
-                              phas2=datan2(dimag(egtmp2),
-     +                             realpart(egtmp2))
+                              phas1=datan2(dimag(egtmp1),dble(egtmp1))
+                              phas2=datan2(dimag(egtmp2),dble(egtmp2))
                            endif
                            if(iom.eq.1)then
                               egtmp3=2.d0*egtmp1-egtmp2
@@ -269,8 +247,8 @@ c     from the inner grid points
                            u3bar=uvec(ic,iom,jx3+2,jx2+2,kx1c)*egtmp3
                            egtmp2=u3bar*
      +                          dconjg(uvec(ic,iom,jx3+1,jx2+1,kx1c))
-                           phas=datan2(imagpart(egtmp2),
-     +                          realpart(egtmp2))
+                           phas=datan2(dimag(egtmp2),
+     +                          real(egtmp2))
                            egtmp2=dcmplx(dcos(phas),-dsin(phas))
                            u3bar=u3bar*egtmp2
                            u3bar=2.d0*uvec(ic,iom,jx3+1,jx2+1,kx1c)-
@@ -297,10 +275,8 @@ c     from the inner grid points
                            if(ic.eq.1.and.iom.eq.1)then
                               egtmp1=ctmp2(ik)/ctmp1(ik)
                               egtmp2=ctmp3(ik)/ctmp2(ik)
-                              phas1=datan2(dimag(egtmp1),
-     +                             realpart(egtmp1))
-                              phas2=datan2(dimag(egtmp2),
-     +                             realpart(egtmp2))
+                              phas1=datan2(dimag(egtmp1),dble(egtmp1))
+                              phas2=datan2(dimag(egtmp2),dble(egtmp2))
                            endif
                            if(iom.eq.1)then
                               egtmp3=2.d0*egtmp1-egtmp2
@@ -317,8 +293,8 @@ c     from the inner grid points
                            u3bar=uvec(ic,iom,jx3-2,jx2+2,kx1c)*egtmp3
                            egtmp2=u3bar*
      +                            dconjg(uvec(ic,iom,jx3-1,jx2+1,kx1c))
-                           phas=datan2(imagpart(egtmp2),
-     +                          realpart(egtmp2))
+                           phas=datan2(dimag(egtmp2),
+     +                          real(egtmp2))
                            egtmp2=dcmplx(dcos(phas),-dsin(phas))
                            u3bar=u3bar*egtmp2
                            u3bar=2.d0*uvec(ic,iom,jx3-1,jx2+1,kx1c)-
@@ -345,10 +321,8 @@ c     from the inner grid points
                            if(ic.eq.1.and.iom.eq.1)then
                               egtmp1=ctmp2(ik)/ctmp1(ik)
                               egtmp2=ctmp3(ik)/ctmp2(ik)
-                              phas1=datan2(dimag(egtmp1),
-     +                             realpart(egtmp1))
-                              phas2=datan2(dimag(egtmp2),
-     +                             realpart(egtmp2))
+                              phas1=datan2(dimag(egtmp1),dble(egtmp1))
+                              phas2=datan2(dimag(egtmp2),dble(egtmp2))
                            endif
                            if(iom.eq.1)then
                               egtmp3=2.d0*egtmp1-egtmp2
@@ -365,8 +339,8 @@ c     from the inner grid points
                            u3bar=uvec(ic,iom,jx3+2,jx2-2,kx1c)*egtmp3
                            egtmp2=u3bar*
      +                          dconjg(uvec(ic,iom,jx3+1,jx2-1,kx1c))
-                           phas=datan2(imagpart(egtmp2),
-     +                          realpart(egtmp2))
+                           phas=datan2(dimag(egtmp2),
+     +                          real(egtmp2))
                            egtmp2=dcmplx(dcos(phas),-dsin(phas))
                            u3bar=u3bar*egtmp2
                            u3bar=2.d0*uvec(ic,iom,jx3+1,jx2-1,kx1c)-
@@ -393,10 +367,8 @@ c     from the inner grid points
                            if(ic.eq.1.and.iom.eq.1)then
                               egtmp1=ctmp2(ik)/ctmp1(ik)
                               egtmp2=ctmp3(ik)/ctmp2(ik)
-                              phas1=datan2(dimag(egtmp1),
-     +                             realpart(egtmp1))
-                              phas2=datan2(dimag(egtmp2),
-     +                             realpart(egtmp2))
+                              phas1=datan2(dimag(egtmp1),dble(egtmp1))
+                              phas2=datan2(dimag(egtmp2),dble(egtmp2))
                            endif
                            if(iom.eq.1)then
                               egtmp3=2.d0*egtmp1-egtmp2
@@ -413,8 +385,8 @@ c     from the inner grid points
                            u3bar=uvec(ic,iom,jx3-2,jx2-2,kx1c)*egtmp3
                            egtmp2=u3bar*
      +                          dconjg(uvec(ic,iom,jx3-1,jx2-1,kx1c))
-                           phas=datan2(imagpart(egtmp2),
-     +                          realpart(egtmp2))
+                           phas=datan2(dimag(egtmp2),
+     +                          real(egtmp2))
                            egtmp2=dcmplx(dcos(phas),-dsin(phas))
                            u3bar=u3bar*egtmp2
                            u3bar=2.d0*uvec(ic,iom,jx3-1,jx2-1,kx1c)-
@@ -441,10 +413,8 @@ c     from the inner grid points
                            if(ic.eq.1.and.iom.eq.1)then
                               egtmp1=ctmp2(ik)/ctmp1(ik)
                               egtmp2=ctmp3(ik)/ctmp2(ik)
-                              phas1=datan2(dimag(egtmp1),
-     +                             realpart(egtmp1))
-                              phas2=datan2(dimag(egtmp2),
-     +                             realpart(egtmp2))
+                              phas1=datan2(dimag(egtmp1),dble(egtmp1))
+                              phas2=datan2(dimag(egtmp2),dble(egtmp2))
                            endif
                            if(iom.eq.1)then
                               egtmp3=2.d0*egtmp1-egtmp2
@@ -460,8 +430,8 @@ c     from the inner grid points
                            u3bar=uvec(ic,iom,jx3,jx2+2,kx1c)*egtmp3
                            egtmp2=u3bar*
      +                          dconjg(uvec(ic,iom,jx3,jx2+1,kx1c))
-                           phas=datan2(imagpart(egtmp2),
-     +                          realpart(egtmp2))
+                           phas=datan2(dimag(egtmp2),
+     +                          real(egtmp2))
                            egtmp2=dcmplx(dcos(phas),-dsin(phas))
                            u3bar=u3bar*egtmp2
                            u3bar=2.d0*uvec(ic,iom,jx3,jx2+1,kx1c)-
@@ -488,10 +458,8 @@ c     from the inner grid points
                            if(ic.eq.1.and.iom.eq.1)then
                               egtmp1=ctmp2(ik)/ctmp1(ik)
                               egtmp2=ctmp3(ik)/ctmp2(ik)
-                              phas1=datan2(dimag(egtmp1),
-     +                             realpart(egtmp1))
-                              phas2=datan2(dimag(egtmp2),
-     +                             realpart(egtmp2))
+                              phas1=datan2(dimag(egtmp1),dble(egtmp1))
+                              phas2=datan2(dimag(egtmp2),dble(egtmp2))
                            endif
                            if(iom.eq.1)then
                               egtmp3=2.d0*egtmp1-egtmp2
@@ -507,8 +475,8 @@ c     from the inner grid points
                            u3bar=uvec(ic,iom,jx3+2,jx2,kx1c)*egtmp3
                            egtmp2=u3bar*
      +                          dconjg(uvec(ic,iom,jx3+1,jx2,kx1c))
-                           phas=datan2(imagpart(egtmp2),
-     +                          realpart(egtmp2))
+                           phas=datan2(dimag(egtmp2),
+     +                          real(egtmp2))
                            egtmp2=dcmplx(dcos(phas),-dsin(phas))
                            u3bar=u3bar*egtmp2
                            u3bar=2.d0*uvec(ic,iom,jx3+1,jx2,kx1c)-
@@ -536,10 +504,8 @@ c     from the inner grid points
                            if(ic.eq.1.and.iom.eq.1)then
                               egtmp1=ctmp2(ik)/ctmp1(ik)
                               egtmp2=ctmp3(ik)/ctmp2(ik)
-                              phas1=datan2(dimag(egtmp1),
-     +                             realpart(egtmp1))
-                              phas2=datan2(dimag(egtmp2),
-     +                             realpart(egtmp2))
+                              phas1=datan2(dimag(egtmp1),dble(egtmp1))
+                              phas2=datan2(dimag(egtmp2),dble(egtmp2))
                            endif
                            if(iom.eq.1)then
                               egtmp3=2.d0*egtmp1-egtmp2
@@ -555,8 +521,8 @@ c     from the inner grid points
                            u3bar=uvec(ic,iom,jx3,jx2-2,kx1c)*egtmp3
                            egtmp2=u3bar*
      +                          dconjg(uvec(ic,iom,jx3,jx2-1,kx1c))
-                           phas=datan2(imagpart(egtmp2),
-     +                          realpart(egtmp2))
+                           phas=datan2(dimag(egtmp2),
+     +                          real(egtmp2))
                            egtmp2=dcmplx(dcos(phas),-dsin(phas))
                            u3bar=u3bar*egtmp2
                            u3bar=2.d0*uvec(ic,iom,jx3,jx2-1,kx1c)-u3bar 
@@ -583,10 +549,8 @@ c     from the inner grid points
                            if(ic.eq.1.and.iom.eq.1)then
                               egtmp1=ctmp2(ik)/ctmp1(ik)
                               egtmp2=ctmp3(ik)/ctmp2(ik)
-                              phas1=datan2(dimag(egtmp1),
-     +                             realpart(egtmp1))
-                              phas2=datan2(dimag(egtmp2),
-     +                             realpart(egtmp2))
+                              phas1=datan2(dimag(egtmp1),dble(egtmp1))
+                              phas2=datan2(dimag(egtmp2),dble(egtmp2))
                            endif
                            if(iom.eq.1)then
                               egtmp3=2.d0*egtmp1-egtmp2
@@ -602,8 +566,8 @@ c     from the inner grid points
                            u3bar=uvec(ic,iom,jx3-2,jx2,kx1c)*egtmp3
                            egtmp2=u3bar*
      +                          dconjg(uvec(ic,iom,jx3-1,jx2,kx1c))
-                           phas=datan2(imagpart(egtmp2),
-     +                          realpart(egtmp2))
+                           phas=datan2(dimag(egtmp2),
+     +                          real(egtmp2))
                            egtmp2=dcmplx(dcos(phas),-dsin(phas))
                            u3bar=u3bar*egtmp2
                            u3bar=2.d0*uvec(ic,iom,jx3-1,jx2,kx1c)-u3bar 
@@ -651,26 +615,6 @@ c     Re-introduce reference phase into new plane
      +                          *diag(ic,ic)
  70                  continue
  69               continue
-                  if(ix1.ge.2.and.iphase.eq.1)then
-                     do 71 iom=1,nom2
-                        om=dble(iom-1)*delom
-                        diag(1,1)=cdexp(ai*om*slp*dsx1) 
-                        diag(2,2)=cdexp(ai*om*sls1*dsx1) 
-                        diag(3,3)=cdexp(ai*om*sls2*dsx1)
-                        do 72 ic=1,3
-c     Apply phase-shift advance
-                           uvec(ic,iom,jx3,jx2,kx1c)=
-     +                          uvec(ic,iom,jx3,jx2,kx1c)
-     +                          *diag(ic,ic)
-                           uvec(ic,iom,jx3,jx2,kx1b)=
-     +                          uvec(ic,iom,jx3,jx2,kx1b)
-     +                          *diag(ic,ic)
-                           uvec(ic,iom,jx3,jx2,kx1a)=
-     +                          uvec(ic,iom,jx3,jx2,kx1a)
-     +                          *diag(ic,ic)
- 72                     continue
- 71                  continue
-                  endif
  68            continue
  67         continue
          endif
@@ -688,33 +632,56 @@ c     Apply phase-shift advance
          elseif(ix1.eq.nx1)then
             iout=1
          endif
-         if(iphase.eq.0)tx1=x1o+dble(ix1-1)*dx1
-         if(iphase.eq.1)tx1=x1o+dble(ix1-1)*(dsx1+dx1)
+         tx1=x1o+dble(ix1-1)*dx1
 
+c-----------------------------------------------------------------------
+c     ** rewritten output by James Wookey: Use direct access files for
+c     ** quicker ways into the output
+c-----------------------------------------------------------------------
+
+ 555     format(a,'elasname.',i5.5)
          if(iout.eq.1)then
+c     ** screen messages
             if(ix1.eq.1)write(*,666)a1text,ix1,a2text,tx1
             if(ix1.ne.1)write(*,666)'',ix1,'',tx1
-            if(ix1.eq.1) open(unit=22,file=waveout,form='unformatted')
-            if(ix1.ne.1) open(unit=22,file=waveout,form='unformatted',
-     +           access='append')
-            if(ix1.eq.1)then                         !Header info 
-               write(22)inumber,istart,increment,nx1
-               write(22)dx1,x1o
+            
+            if(ix1.eq.1) then
+c     ** first time around, open files and write grid and 
+c     ** time parameters to header file
+               write(tfname,'(a,a)') 
+     +              waveout(1:index(waveout,' ')-1),'.bin'
+               
+               open(22,file=tfname,form='unformatted',
+     +              access='direct',recl=16)
+               
+               write(tfname,'(a,a)') 
+     +              waveout(1:index(waveout,' ')-1),'.hdr'
+               open(23,file=tfname)
+               
+               write(23,*) inumber,istart,increment,nx1
+               write(23,*) dx1,x1o
+               write(23,*) dx2,x2o
+               write(23,*) dx3,x3o
+               write(23,*)  nx1,nx2,nx3
+               write(23,*) nt,dt,nom,nom2
             endif
-            write(22)ix1,nx1,nx2,nx3
-            write(22)nt,dt,nom,nom2
+            
+c     ** write out the output current plane and starting index
+            write(23,*) ix1,ifindex
+            
             do jx2=1,nx2
                do jx3=1,nx3
-                  write(22)jx2,jx3,nt,0.0d0,tott
                   do it=1,nt
-                     write(22)uvec(1,it,jx3,jx2,kx1c),
-     +                    uvec(2,it,jx3,jx2,kx1c),
-     +                    uvec(3,it,jx3,jx2,kx1c)
+                     write(22,rec=ifindex) uvec(1,it,jx3,jx2,kx1c)
+                     write(22,rec=ifindex+1) uvec(2,it,jx3,jx2,kx1c)
+                     write(22,rec=ifindex+2) uvec(3,it,jx3,jx2,kx1c)
+                     ifindex = ifindex + 3
                   enddo
                enddo
             enddo
-            close(22)
+            
          endif
+c-----------------------------------------------------------------------
 
          if(ix1.gt.1.and.ix1.lt.nx1)then
             call uvecshft(uvec,nom,nx3,nx2)

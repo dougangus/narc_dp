@@ -2,7 +2,7 @@ c...+....|....+....|....+....|....+....|....+....|....+....|....+....|..
 c  File Propagat.f contains the following 4 subroutines: Propagat, 
 c  Solvepa, Solvepab and Symtry.
 c
-c  Last modified: October 31, 2006.
+c  Last modified: April 19, 2012.
 c***********************************************************************
       subroutine propagat(a3,c11inv,p0,p2,p3,p22,p23,p32,p33)
 c     Calculates the variable coefficients of the one-way wave
@@ -10,7 +10,7 @@ c     equation.
 c***********************************************************************
 
       implicit none
-      include '../Input/narc_dp.par'
+      include 'narc_dp.par'
 
       integer i,j,ierr
       real*8 densqrt
@@ -187,11 +187,12 @@ c     Evaluates the P-matrix values in two stages using the symmetric
 c     and antisymmetric parts of the defining equation.
 c***********************************************************************
 
-      implicit real*8(a-h,o-z)
+      implicit none
 
-      dimension cvalsqin(3,3)
-      dimension p(3,3),panti(3,3),psym(3,3)
-      dimension qtemp(3,3),qanti(3,3),qsym(3,3)
+      integer i,j
+      real*8 cvalsqin(3,3)
+      real*8 p(3,3),panti(3,3),psym(3,3)
+      real*8 qtemp(3,3),qanti(3,3),qsym(3,3)
 
       do i=1,3
          do j=1,3
@@ -210,9 +211,9 @@ c***********************************************************************
       panti(3,1) = -panti(1,3)
       panti(3,2) = -panti(2,3)
 
-      psym(1,1) = qsym(1,1)/(2*cvalsqin(1,1))
-      psym(2,2) = qsym(2,2)/(2*cvalsqin(2,2))
-      psym(3,3) = qsym(3,3)/(2*cvalsqin(3,3))
+      psym(1,1) = qsym(1,1)/(2.d0*cvalsqin(1,1))
+      psym(2,2) = qsym(2,2)/(2.d0*cvalsqin(2,2))
+      psym(3,3) = qsym(3,3)/(2.d0*cvalsqin(3,3))
       psym(1,2) = qsym(1,2)/(cvalsqin(1,1)+cvalsqin(2,2))
       psym(1,3) = qsym(1,3)/(cvalsqin(1,1)+cvalsqin(3,3))
       psym(2,3) = qsym(2,3)/(cvalsqin(2,2)+cvalsqin(3,3))

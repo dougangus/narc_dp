@@ -2,16 +2,16 @@ c...+....|....+....|....+....|....+....|....+....|....+....|....+....|..
 c  File Ehomogen.f contains the following 2 subroutines: Inelastc and 
 c  Effectiv.
 c
-c  Last modified: July 16, 2007.
+c  Last modified: April 18, 2012.
 c***********************************************************************
-      subroutine inelastc(ix1,jx1,nx2,nx3,a6)
+      subroutine inelastc(jx1,nx2,nx3,a6)
 c     Input elastic constants (divided by density) in Voigt notation.
 c***********************************************************************
 
       implicit none
-      include '../Input/narc_dp.par'
+      include 'narc_dp.par'
 
-      integer ix1,jx1,nx2,nx3,kx2,kx3,i,j
+      integer jx1,nx2,nx3,kx2,kx3,i,j
       real*8 a6(6,6,nx3mx,nx2mx,nx1sto)
       real*8 a3(3,3,3,3),a3r(3,3,3,3),a(6,6)
 
@@ -100,6 +100,9 @@ c***********************************************************************
                elseif(ielas.eq.12.and.iuse.eq.0)then !Afar
                   call afar_homoec(a)
                   call aijkl(a,a3)
+               elseif(ielas.eq.13.and.iuse.eq.0)then !Karakoram
+                  call karakoram_homoec(a)
+                  call aijkl(a,a3)
                endif
                call averps(a3,vfast,vslow)
                call rotate(alpha1,beta1,gamma1,a3,a3r)
@@ -122,31 +125,83 @@ c***********************************************************************
       end
 
 c***********************************************************************
-      subroutine freqelastc(ix1,jx1,nt,dt,aw6)
+      subroutine freqelastc(jx1,nt,dt)
 c     Input elastic constants (divided by density) in Voigt notation.
 c***********************************************************************
 
       implicit none
-      include '../Input/narc_dp.par'
+      include 'narc_dp.par'
 
-      integer ix1,jx1,i,j,nt,nom,iom
-      real*8 omn,delom,om,dt,pi,ttot
-      real*8 a3(3,3,3,3),a3r(3,3,3,3),a(6,6)
-      complex*16 ai,aw6(6,6,ntmx)
+      integer jx1,i,j,nt,nom,iom,mrot
+      real*8 omn,delom,om,dt,pi,ttot,freq
+      real*8 poro,tau,bulk,fracden,fracrad,vtieps,vtigam,vtidel
+      real*8 a3r(3,3,3,3)
+      complex*8 ai,c6(6,6),a3c(3,3,3,3),a3cr(3,3,3,3)
+
+      real*4 aimval
+      aimval=0.0
 
       pi=4.d0*pi4
+      mrot=0
+      if(alpha1.ne.0.d0)mrot=1
+      if(beta1.ne.0.d0)mrot=1
+      if(gamma1.ne.0.d0)mrot=1
+      if(alpha2.ne.0.d0)mrot=1
+      if(beta2.ne.0.d0)mrot=1
+      if(gamma2.ne.0.d0)mrot=1
 
       ttot=dt*dble(nt)
       omn=pi/dt
-      nom=nt/2 + 1
+      nom=nt/2+1
       delom=2.d0*pi/ttot
       ai=dcmplx(0.d0,1.d0)
 
-      write(*,*)nt,dt
-      write(*,*)pi,ttot
-      write(*,*)omn,nom,delom
-      write(*,*)ai
-      read(*,*)
+      om=0.d0
+      i=1
+      j=1
+      iom=1
+      if(jx1.eq.1) iom=2
+
+      poro=0.1d0
+      tau=9.5d-7
+      bulk=0.0068d9
+      fracden=0.024d0
+      fracrad=1.d0
+      vtieps=0.24d0
+      vtigam=0.11d0
+      vtidel=0.2d0
+
+      om=-delom
+      open(91,file='./Output/elas_freq.txt')
+      do iom=1,nom
+         om=om+delom
+         freq=om/(2.d0*pi)
+c         if(freq.eq.0.d0)freq=delom/(2.d0*pi*100.d0)
+         call computestiffness(vfast,vslow,den,
+     +        poro,tau,bulk,fracden,fracrad,vtieps,vtigam,vtidel,
+     +        freq,c6)
+c     +        om,c6)
+
+         if(mrot.eq.1)then
+            call caijkl(c6,a3r,a3c)
+            call crotate(alpha1,beta1,gamma1,a3c,a3cr)
+            call crotate(alpha2,beta2,gamma2,a3cr,a3c)
+            call ac66(a3c,c6)
+         endif
+
+         do i=1,6
+            if(i.eq.1)write(91,*)freq,om,(c6(i,j),j=i,6)
+            if(i.ne.1)write(91,*)'       ',(c6(i,j),j=i,6)
+         enddo
+
+c     Transfer to frequency dependent density normalised elastic array
+         do i=1,6
+            do j=1,6
+               aw6(i,j,iom)=c6(i,j)/den
+            enddo
+         enddo
+      enddo
+      close(91)
 
       return
       end

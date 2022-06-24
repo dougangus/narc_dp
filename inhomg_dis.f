@@ -2,17 +2,17 @@ c...+....|....+....|....+....|....+....|....+....|....+....|....+....|..
 c  File Inhomg_dis.f contains the following 2 subroutines: EcCart and 
 c  AngCart.
 c
-c  Last modified: November 3, 2006.
+c  Last modified: April 17, 2012.
 c***********************************************************************
-      subroutine eccart(ix1,nx1st,nx2,nx3,a6,numec)
+      subroutine eccart(nx1st,nx2,nx3,a6,numec)
 c     Input elastic constants (divided by density) in Voigt notation
 c     of the curvilinear grid.
 c***********************************************************************
 
       implicit none
-      include '../Input/narc_dp.par'
+      include 'narc_dp.par'
 
-      integer ix1,nx1st,nx2,nx3,numec,jx1lo,jx1hi,kx1,kx2,kx3,i,j
+      integer nx1st,nx2,nx3,numec,jx1lo,jx1hi,kx1,kx2,kx3,i,j
       real*8 density
       real*8 a6(6,6,nx3mx,nx2mx,nx1sto)
 
@@ -92,15 +92,15 @@ c***********************************************************************
       end
 
 c***********************************************************************
-      subroutine angcart(ix1,nx1st,nx2,nx3,a6,a3,numec)
+      subroutine angcart(nx1st,nx2,nx3,a6,a3)
 c     Input elastic constants (divided by density) in Voigt notation
 c     of the curvilinear grid.
 c***********************************************************************
 
       implicit none
-      include '../Input/narc_dp.par'
+      include 'narc_dp.par'
 
-      integer ix1,nx1st,nx2,nx3,numec,jx1lo,jx1hi,kx1,kx2,kx3
+      integer nx1st,nx2,nx3,jx1lo,jx1hi,kx1,kx2,kx3
       integer i,j
       real*8 alpha,beta,gamma
       real*8 a3(3,3,3,3),a3r1(3,3,3,3),a3r2(3,3,3,3)

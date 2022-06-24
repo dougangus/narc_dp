@@ -1,0 +1,4 @@
+gfortran -fbounds-check -ffixed-line-length-none -Wall -o ../Bin/plot_3C plot_3C.f  \
+-L/usr/local/lib -L/usr/X11R6/lib -L/usr/local/lib  \
+-lncarg -lncarg_gks -lncarg_c -lX11 -lm
+

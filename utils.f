@@ -1,10 +1,11 @@
 c........+.........+.........+.........+.........+.........+.........+..
-c     File Utils.f contains the following 21 subroutines: Roots, 
+c     File Utils.f contains the following 26 subroutines: Roots, 
 c     Coeff, Cofac, Xrdvec, Dpoly, Rotate, Rotvec, Rotatelc, Rinv3, 
-c     Rinv3a, Cinv3, Trans, Rotmat1, Rmult3a, Rmult3b, Rmult3c, 
-c     Rmult3d, Cmult3a, Uvecshft, Rtaper, and Detm.
+c     Cinv3, Rinv3a, Crinv3, Trans, Ctrans, Rotmat1, Rmult3a, Cmult3a, 
+c     Rmult3b, Cmult3b, Rmult3c, Cmult3c, Rmult3d, Cmult3d, Uvecshft, 
+c     Rtaper, and Detm.
 c
-c     Last modified: April 16, 2012.
+c     Last modified: May 23, 2012.
 c***********************************************************************
       subroutine roots(a1,a2,a3,x1,x2r,x2i,x3r,x3i)
 c     Subroutine to evaluate the roots of a third order polynomial.
@@ -143,15 +144,16 @@ c     Generating b_kj and b_qq
       end
 
 c***********************************************************************
-      subroutine xrdvec(fsm,ibranch,cdv)
+      subroutine xrdvec(fsm,ivec,cdv)
 c***********************************************************************
 
       implicit none
 
-      integer i,j,i1,j1,i2,j2,imx,jmx,ibranch
+      integer i,j,i1,j1,i2,j2,imx,jmx,ibranch,ivec
       real*8 tst0,test,scale
       real*8 fsm(3,3),cofsm(3,3),cdv(3)
 
+      ibranch=ivec
       tst0=0.d0
 
       do 100 i=1,3
@@ -394,6 +396,68 @@ c     c_ijkl ---> c_mnrs
       end
 
 c***********************************************************************
+      subroutine crotate(alpha,beta,gam,cc,cct)
+c     This subroutine performs a transformation of the tensor c_ijkl of 
+c     elastic constants by rotation about three angles (alpha, beta and
+c     gamma)
+c     alpha : rotation about x_2
+c     beta  : rotation about x_3
+c     gamma : rotation about x_1
+c     Note that the sequence of the rotation is important (AB.ne.BA)
+c     in this case we rotate about x_2 first, than x_3 and finally x_1.
+c     (Note all rotations are in a clockwise sense).
+c***********************************************************************
+
+      implicit none
+
+      integer i,j,k,l,m,n,r,s
+      real*8 alpha,beta,gam
+      real*4 a(3,3)
+      complex*8 csum
+      complex*8 cc(3,3,3,3),cct(3,3,3,3)
+
+      a(1,1) = sngl( dcos(alpha)*dcos(beta))
+      a(1,2) = sngl( dsin(beta))
+      a(1,3) = sngl(-dsin(alpha)*dcos(beta))
+      a(2,1) = sngl(-dcos(gam)*dsin(beta)*dcos(alpha)+
+     +     dsin(gam)*dsin(alpha))
+      a(2,2) = sngl( dcos(gam)*dcos(beta))
+      a(2,3) = sngl( dcos(gam)*dsin(beta)*dsin(alpha)+
+     +     dsin(gam)*dcos(alpha))
+      a(3,1) = sngl( dsin(gam)*dsin(beta)*dcos(alpha)+
+     +     dcos(gam)*dsin(alpha))
+      a(3,2) = sngl(-dsin(gam)*dcos(beta))
+      a(3,3) = sngl(-dsin(gam)*dsin(beta)*dsin(alpha)+
+     +     dcos(gam)*dcos(alpha))
+
+c     c_ijkl ---> c_mnrs
+
+      do m=1,3
+        do n=1,3
+          do r=1,3
+            do s=1,3
+              csum = cmplx(0.0,0.0)
+              do i=1,3
+                do j=1,3
+                  do k=1,3
+                    do l=1,3
+                      csum = csum + 
+     +                      a(m,i)*a(n,j)*a(r,k)*a(s,l)*cc(i,j,k,l)
+                   enddo
+                 enddo
+               enddo
+             enddo
+              if(cabs(csum).lt.1.0) csum = cmplx(0.0,0.0)
+              cct(m,n,r,s) = csum
+           enddo
+         enddo
+       enddo
+      enddo
+
+      return
+      end
+
+c***********************************************************************
       subroutine rotvec(a,b)
 c     This subroutine performs a transformation of the vector from
 c     one coordinate system to another defined by the transformation
@@ -474,8 +538,10 @@ c***********************************************************************
       implicit none
 
       integer i,j
-      real*8 deta,detb,detc
+      real*8 deta,detb,detc,rnull
       real*8 a(3,3),ainv(3,3),co(3,3)
+
+      rnull=0.d0
 
       co(1,1)=(a(2,2)*a(3,3)-a(2,3)*a(3,2))
       co(1,2)=-(a(2,1)*a(3,3)-a(2,3)*a(3,1))
@@ -495,7 +561,53 @@ c***********************************************************************
 
 c     Check to see if a is invertable
 
-      if(deta.eq.0.d0.or.detb.eq.0.d0.or.detc.eq.0.d0)then
+      if(deta.eq.rnull.or.detb.eq.rnull.or.detc.eq.rnull)then
+         write(*,*)'Error in rinv3.  Determinant equal to zero.'
+         write(*,*)'Program stopped.'
+         stop
+      endif
+
+      do 10 i=1,3
+        do 11 j=1,3
+          ainv(i,j)=co(j,i)/deta
+11      continue
+10    continue
+
+      return
+      end
+
+c***********************************************************************
+      subroutine cinv3(a,ainv)
+c     The subroutine inverts the complex 3x3 matrix a.
+c***********************************************************************
+
+      implicit none
+
+      integer i,j
+      complex*8 deta,detb,detc,cnull
+      complex*8 a(3,3),ainv(3,3),co(3,3)
+
+      cnull=cmplx(0.0,0.0)
+
+      co(1,1)=(a(2,2)*a(3,3)-a(2,3)*a(3,2))
+      co(1,2)=-(a(2,1)*a(3,3)-a(2,3)*a(3,1))
+      co(1,3)=(a(2,1)*a(3,2)-a(2,2)*a(3,1))
+
+      co(2,1)=-(a(1,2)*a(3,3)-a(1,3)*a(3,2))
+      co(2,2)=(a(1,1)*a(3,3)-a(1,3)*a(3,1))
+      co(2,3)=-(a(1,1)*a(3,2)-a(1,2)*a(3,1))
+
+      co(3,1)=(a(1,2)*a(2,3)-a(1,3)*a(2,2))
+      co(3,2)=-(a(1,1)*a(2,3)-a(1,3)*a(2,1))
+      co(3,3)=(a(1,1)*a(2,2)-a(1,2)*a(2,1))
+
+      deta=a(1,1)*co(1,1)+a(1,2)*co(1,2)+a(1,3)*co(1,3)
+      detb=a(2,1)*co(2,1)+a(2,2)*co(2,2)+a(2,3)*co(2,3)
+      detc=a(3,1)*co(3,1)+a(3,2)*co(3,2)+a(3,3)*co(3,3)
+
+c     Check to see if a is invertable
+
+      if(deta.eq.cnull.or.detb.eq.cnull.or.detc.eq.cnull)then
          write(*,*)'Error in rinv3.  Determinant equal to zero.'
          write(*,*)'Program stopped.'
          stop
@@ -555,8 +667,8 @@ c         write(*,*)'Error in rinv3.  Eigenvectors not independent.'
       end
 
 c***********************************************************************
-      subroutine cinv3(a,ainv)
-c     The subroutine inverts the 3x3 complex matrix a.
+      subroutine crinv3(a,ainv)
+c     The subroutine inverts the 3x3 complex double precision matrix a.
 c***********************************************************************
 
       implicit none
@@ -612,6 +724,25 @@ c***********************************************************************
 
       integer i,j
       real*8 a(3,3),atrans(3,3)
+
+      do 10 i=1,3
+        do 11 j=1,3
+          atrans(i,j)=a(j,i)
+11      continue
+10    continue
+
+      return
+      end
+
+c***********************************************************************
+      subroutine ctrans3(a,atrans)
+c     The subroutine transposes the complex 3x3 matrix a.
+c***********************************************************************
+
+      implicit none
+
+      integer i,j
+      complex*8 a(3,3),atrans(3,3)
 
       do 10 i=1,3
         do 11 j=1,3
@@ -708,6 +839,37 @@ c***********************************************************************
       end
 
 c***********************************************************************
+      subroutine cmult3b(a,b,c,d)
+c     This subroutine multiplies three complex 3x3 matrices.
+c***********************************************************************
+
+      implicit none
+
+      integer i,j,k
+      complex*8 a(3,3),b(3,3),c(3,3),d(3,3),work1(3,3)
+
+      do 10 i=1,3
+        do 11 j=1,3
+          work1(i,j) = cmplx(0.0,0.0)
+          do 12 k=1,3
+            work1(i,j) = work1(i,j) + a(i,k)*b(k,j)
+12        continue
+11      continue
+10    continue
+
+      do 15 i=1,3
+        do 16 j=1,3
+          d(i,j) = cmplx(0.0,0.0)
+          do 17 k=1,3
+            d(i,j) = d(i,j) + work1(i,k)*c(k,j)
+17        continue
+16      continue
+15    continue
+
+      return
+      end
+
+c***********************************************************************
       subroutine rmult3c(a,b,c,d,e)
 c     This subroutine multiplies four real 3x3 matrices.
 c***********************************************************************
@@ -739,6 +901,47 @@ c***********************************************************************
       do 16 i=1,3
         do 17 j=1,3
           e(i,j) = 0.d0
+          do 18 k=1,3
+            e(i,j) = e(i,j) + work1(i,k)*work2(k,j)
+18        continue
+17      continue
+16    continue
+
+      return
+      end
+
+c***********************************************************************
+      subroutine cmult3c(a,b,c,d,e)
+c     This subroutine multiplies four complex 3x3 matrices.
+c***********************************************************************
+
+      implicit none
+
+      integer i,j,k
+      complex*8 a(3,3),b(3,3),c(3,3),d(3,3),e(3,3),work1(3,3),
+     +       work2(3,3)
+
+      do 10 i=1,3
+        do 11 j=1,3
+          work1(i,j) = (0.0,0.0)
+          do 12 k=1,3
+            work1(i,j) = work1(i,j) + a(i,k)*b(k,j)
+12        continue
+11      continue
+10    continue
+
+      do 13 i=1,3
+        do 14 j=1,3
+          work2(i,j) = cmplx(0.0,0.0)
+          do 15 k=1,3
+            work2(i,j) = work2(i,j) + c(i,k)*d(k,j)
+15        continue
+14      continue
+13    continue
+
+      do 16 i=1,3
+        do 17 j=1,3
+          e(i,j) = cmplx(0.0,0.0)
           do 18 k=1,3
             e(i,j) = e(i,j) + work1(i,k)*work2(k,j)
 18        continue
@@ -799,6 +1002,56 @@ c***********************************************************************
       end
 
 c***********************************************************************
+      subroutine cmult3d(a,b,c,d,e,f)
+c     This subroutine multiplies five complex 3x3 matrices.
+c***********************************************************************
+
+      implicit none
+
+      integer i,j,k
+      complex*8 a(3,3),b(3,3),c(3,3),d(3,3),e(3,3),f(3,3),work1(3,3),
+     +       work2(3,3),work3(3,3)
+
+      do 10 i=1,3
+        do 11 j=1,3
+          work1(i,j) = cmplx(0.0,0.0)
+          do 12 k=1,3
+            work1(i,j) = work1(i,j) + a(i,k)*b(k,j)
+12        continue
+11      continue
+10    continue
+
+      do 13 i=1,3
+        do 14 j=1,3
+          work2(i,j) = cmplx(0.0,0.0)
+          do 15 k=1,3
+            work2(i,j) = work2(i,j) + c(i,k)*d(k,j)
+15        continue
+14      continue
+13    continue
+
+      do 16 i=1,3
+        do 17 j=1,3
+          work3(i,j) =cmplx(0.0,0.0)
+          do 18 k=1,3
+            work3(i,j) = work3(i,j) + work1(i,k)*work2(k,j)
+18        continue
+17      continue
+16    continue
+
+      do 19 i=1,3
+        do 20 j=1,3
+          f(i,j) = cmplx(0.0,0.0)
+          do 21 k=1,3
+            f(i,j) = f(i,j) + work3(i,k)*e(k,j)
+21        continue
+20      continue
+19    continue
+
+      return
+      end
+
+c***********************************************************************
       subroutine cmult3a(a,b,c)
 c     This subroutine multiplies two complex 3x3 matrices.
 c***********************************************************************
@@ -806,12 +1059,11 @@ c***********************************************************************
       implicit none
 
       integer i,j,k
-      real*8 b(3,3)
-      complex*16 a(3,3),c(3,3)
+      complex*8 a(3,3),b(3,3),c(3,3)
 
       do 10 i=1,3
         do 11 j=1,3
-          c(i,j) = dcmplx(0.d0,0.d0)
+          c(i,j) = cmplx(0.0,0.0)
           do 12 k=1,3
             c(i,j) = c(i,j) + a(i,k)*b(k,j)
 12        continue
@@ -822,17 +1074,19 @@ c***********************************************************************
       end
 
 c***********************************************************************
-      subroutine uvecshft(uvec,nt,nom,nx3,nx2)
+      subroutine uvecshft(uvec,nom,nx3,nx2)
 c     Save the vector field of the newest x1 plane into the so-called
 c     z-dz buffer and moves the z-dz buffer into the z-2dz buffer. 
 c***********************************************************************
 
       implicit none
-      include '../Input/narc_dp.par'
+      include 'narc_dp.par'
 
-      integer nt,nom,nx2,nx3,ix2,ix3,it,i
+      integer nom,nx2,nx3,ix2,ix3,it,i,nantest,istop
       complex*16 uvec(3,ntmx,nx3mx,nx2mx,3)
 
+      istop=0
+      nantest=1
       do 10 ix2=1,nx2
         do 20 ix3=1,nx3
           do 30 it=1,nom
@@ -840,6 +1094,26 @@ c***********************************************************************
               uvec(i,it,ix3,ix2,1)=uvec(i,it,ix3,ix2,2)
               uvec(i,it,ix3,ix2,2)=uvec(i,it,ix3,ix2,3)
               uvec(i,it,ix3,ix2,3)=dcmplx(0.d0,0.d0)
+              if(nantest.eq.1)then
+                 if(isnan(realpart(uvec(i,it,ix3,ix2,1))).or.
+     +                isnan(imagpart(uvec(i,it,ix3,ix2,1))))then
+                    istop=1
+                 elseif(isnan(realpart(uvec(i,it,ix3,ix2,2))).or.
+     +                   isnan(imagpart(uvec(i,it,ix3,ix2,2))))then
+                    istop=1
+                 elseif(isnan(realpart(uvec(i,it,ix3,ix2,3))).or.
+     +                   isnan(imagpart(uvec(i,it,ix3,ix2,3))))then
+                    istop=1
+                 endif
+              endif
+              if(istop.eq.1)then
+                 write(*,*)'Problem: NaN in uvec wavefield'
+                 write(*,*)'i,it,ix2,ix3: ',i,it,ix2,ix3
+                 write(*,*)'uvec(i,1): ',uvec(i,it,ix3,ix2,1)
+                 write(*,*)'uvec(i,2): ',uvec(i,it,ix3,ix2,2)
+                 write(*,*)'uvec(i,3): ',uvec(i,it,ix3,ix2,3)
+                 stop
+              endif
 40          continue
 30        continue
 20      continue
@@ -916,7 +1190,7 @@ c     This subroutine applies a high pass filter to the frequency data
 c***********************************************************************
 
       implicit none
-      include '../Input/narc_dp.par'
+      include 'narc_dp.par'
 
       integer iom,nom2,iomc1,iomc2
       real*8 pi,rat,rat1

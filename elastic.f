@@ -1,8 +1,8 @@
 c........+.........+.........+.........+.........+.........+.........+..
-c  File Elastic.f contains the following 6 subroutines: Edo, Emodel, 
-c  C66, Aijkl, Isotens, Averps, and Symmetry.
+c  File Elastic.f contains the following 8 subroutines: Edo, Emodel, 
+c  C66, Aijkl, Caijkl, Isotens, Averps, and Symmetry.
 c
-c  Last modified: April 16, 2012.
+c  Last modified: October 8, 2012.
 c***********************************************************************
       subroutine edo(ix1,jx1,nx1st,nx1,nx2,nx3,nt,dt,dx1,dx2,dx3,a6)
 c     This subroutine interfaces with the subroutine emodel: 
@@ -12,10 +12,10 @@ c     3) inhomogeneous and discrete (input from model file).
 c***********************************************************************
 
       implicit none
-      include '../Input/narc_dp.par'
+      include 'narc_dp.par'
 
       integer ix1,jx1,nx1st,nx1,nx2,nx3,itmp,nt
-      real*8 dx1,dx2,dx3,tmp1,dt
+      real*8 dx1,dx2,dx3,dt
       real*8 a6(6,6,nx3mx,nx2mx,nx1sto)
 
       if(jx1.ne.-1)then
@@ -43,15 +43,19 @@ c***********************************************************************
          if(ix1.eq.1)then
             call emodel(ix1,jx1,nx1st,nx1,nx2,nx3,nt,dt,dx1,dx2,dx3,a6)
          endif
+      elseif(inhomog.eq.2)then
+         if(ix1.eq.1)then
+            call emodel(ix1,jx1,nx1st,nx1,nx2,nx3,nt,dt,dx1,dx2,dx3,a6)
+         endif
       elseif(inhomog.eq.1)then
          if(imtrick.eq.1.and.ianalyt.eq.0)then
-            write(*,*)'itmp in edo',itmp
-c            pause
-            if(ix1.eq.1.or.mod(ix1,itmp).eq.0.and.ix1.ne.nx1)then
-               call emodel(ix1,jx1,nx1st,nx1,nx2,nx3,dx1,dx2,dx3,a6)
-            endif
+          write(*,*)'itmp in edo',itmp
+          stop
+          if(ix1.eq.1.or.mod(ix1,itmp).eq.0.and.ix1.ne.nx1)then
+            call emodel(ix1,jx1,nx1st,nx1,nx2,nx3,nt,dt,dx1,dx2,dx3,a6)
+          endif
          elseif((jx1.eq.1.and.inhomog.ge.1).or.(jx1.eq.-1))then
-            call emodel(ix1,jx1,nx1st,nx1,nx2,nx3,dx1,dx2,dx3,a6)
+            call emodel(ix1,jx1,nx1st,nx1,nx2,nx3,nt,dt,dx1,dx2,dx3,a6)
          endif
       endif
 
@@ -67,22 +71,21 @@ c     3) inhomogeneous and discrete (input from model file).
 c***********************************************************************
 
       implicit none
-      include '../Input/narc_dp.par'
+      include 'narc_dp.par'
 
       integer ix1,jx1,nx1st,nx1,nx2,nx3,i,j,numec,ijflag,nt
       real*8 dx1,dx2,dx3,tmp1,tmp2,dt
       real*8 a6(6,6,nx3mx,nx2mx,nx1sto),a3(3,3,3,3),a(6,6)
-      complex*16 aw6(6,6,ntmx)
 
       if(inhomog.eq.0.or.iuse.eq.1)then
          if(ix1.eq.1)
      +        write(*,*)'             -> using homog or iuse option'
-         call inelastc(ix1,jx1,nx2,nx3,a6)
+         call inelastc(jx1,nx2,nx3,a6)
       elseif(inhomog.eq.2)then
          if(ix1.eq.1)then
             write(*,*)'             -> using homogeneous frequency'
-            write(*,*)'                dependent option'
-            call freqelastc(ix1,jx1,nt,dt,aw6)
+            write(*,*)'             -> dependent elasticity option'
+            call freqelastc(jx1,nt,dt)
          endif
       elseif(inhomog.eq.1)then
          if(ianalyt.eq.0)then   !Discrete model (from input file)
@@ -154,7 +157,7 @@ c***********************************************************************
                write(*,*)'             -> calling discrete emodel from'
                write(*,*)'                input file'
             endif
-            call eccart(ix1,nx1st,nx2,nx3,a6,numec)
+            call eccart(nx1st,nx2,nx3,a6,numec)
 c     Next command to close model input file after initial read for 
 c     elastic tensor used in evaluating wavefront initial conditions
             if(jx1.eq.-1)then
@@ -183,17 +186,13 @@ c     elastic tensor used in evaluating wavefront initial conditions
             elseif(imodel.eq.4)then
                if(jx1.eq.-1)
      +              write(*,*)'             -> using anelast emodel'
-               call anelast(ix1,dx1,nx1,dx2,nx2,dx3,nx3,nx1st,a6)
+               call anelast(ix1,dx1,nx1,nx2,nx3,nx1st,a6)
             elseif(imodel.eq.5)then
                ijflag=0
                if(jx1.eq.-1)
      +              write(*,*)'             -> using spetzler emodel'
-               call spetzler(ix1,dx1,nx1,dx2,nx2,dx3,nx3,nx1st,a6,
+               call spetzler(ix1,dx1,dx2,nx2,dx3,nx3,nx1st,a6,
      +              ijflag)
-            elseif(imodel.eq.6)then
-               if(jx1.eq.-1)
-     +              write(*,*)'             -> using tibet emodel'
-               call tibet(ix1,dx1,nx1,dx2,nx2,dx3,nx3,nx1st,a6)
             elseif(imodel.eq.7)then
                if(jx1.eq.-1)
      +              write(*,*)'             -> using recfnc emodel'
@@ -201,8 +200,12 @@ c     elastic tensor used in evaluating wavefront initial conditions
             elseif(imodel.eq.8)then
                if(jx1.eq.-1)
      +              write(*,*)'             -> using afar emodel'
-c               call afar(jx1,ix1,dx1,nx1,dx2,nx2,dx3,nx3,nx1st,a6)
-               call afar_alt(jx1,ix1,dx1,nx1,dx2,nx2,dx3,nx3,nx1st,a6)
+c               call afar(jx1,ix1,dx2,nx2,dx3,nx3,nx1st,a6)
+               call afar_alt(jx1,ix1,dx2,nx2,dx3,nx3,nx1st,a6)
+            elseif(imodel.eq.9)then
+               if(jx1.eq.-1)
+     +              write(*,*)'             -> using karakoram emodel'
+               call karakoram(jx1,ix1,dx2,nx2,dx3,nx3,nx1st,a6)
             endif
          endif
          if(jx1.eq.-1)write(*,*)
@@ -220,6 +223,56 @@ c***********************************************************************
 
       integer i,j
       real*8 as6(6,6),a3(3,3,3,3)
+
+      as6(1,1)=a3(1,1,1,1)
+      as6(2,2)=a3(2,2,2,2)
+      as6(3,3)=a3(3,3,3,3)
+      as6(1,2)=a3(1,1,2,2)
+      as6(1,3)=a3(1,1,3,3)
+      as6(2,3)=a3(2,2,3,3)
+  
+      as6(6,6)=a3(1,2,1,2)
+      as6(5,5)=a3(1,3,1,3)
+      as6(4,4)=a3(2,3,2,3)
+ 
+      as6(1,4)=a3(1,1,2,3)
+      as6(1,5)=a3(1,1,1,3)
+      as6(1,6)=a3(1,1,1,2)
+ 
+      as6(2,4)=a3(2,2,2,3)
+      as6(2,5)=a3(2,2,1,3)
+      as6(2,6)=a3(2,2,1,2)
+ 
+      as6(3,4)=a3(3,3,2,3)
+      as6(3,5)=a3(3,3,1,3)
+      as6(3,6)=a3(3,3,1,2)
+ 
+      as6(4,5)=a3(2,3,1,3)
+      as6(4,6)=a3(2,3,1,2)
+
+      as6(5,6)=a3(1,3,1,2)
+
+c     Impose symmetry 
+
+      do i=2,6
+         do j=1,i-1
+            as6(i,j)=as6(j,i)
+         enddo
+      enddo
+
+      return
+      end
+
+
+c***********************************************************************
+      subroutine ac66(a3,as6)
+c     Returns the a_ij (Voigt) given the a_ijkl.  
+c***********************************************************************
+
+      implicit none
+
+      integer i,j
+      complex*8 as6(6,6),a3(3,3,3,3)
 
       as6(1,1)=a3(1,1,1,1)
       as6(2,2)=a3(2,2,2,2)
@@ -393,13 +446,156 @@ c     Impose symmetry -- general form
       end
 
 c***********************************************************************
+      subroutine caijkl(as6,a3r,a3)
+c     Returns the complex a_ijkl given the complex a_mn Voigt notation. 
+c     First, the upper triangle of a_mn is used then imposes the general 
+c     symmetries that apply.  Does not assume particular crystal 
+c     symmetry (e.g. hexagonal).
+c***********************************************************************
+
+      implicit none
+
+      integer i,j,k,l
+      real*8 a3r(3,3,3,3)
+      complex*8 as6(6,6),a3(3,3,3,3)
+
+      do i=1,3
+         do j=1,3
+            do k=1,3
+               do l=1,3
+                  a3(i,j,k,l)=cmplx(0.d0,0.d0)
+               enddo
+            enddo
+         enddo
+      enddo
+
+      a3(1,1,1,1)=as6(1,1)
+      a3(2,2,2,2)=as6(2,2)
+      a3(3,3,3,3)=as6(3,3)
+      a3(1,1,2,2)=as6(1,2)
+      a3(1,1,3,3)=as6(1,3)
+      a3(2,2,3,3)=as6(2,3)
+  
+      a3(1,2,1,2)=as6(6,6)
+      a3(1,3,1,3)=as6(5,5)
+      a3(2,3,2,3)=as6(4,4)
+ 
+      a3(1,1,2,3)=as6(1,4)
+      a3(1,1,1,3)=as6(1,5)
+      a3(1,1,1,2)=as6(1,6)
+ 
+      a3(2,2,2,3)=as6(2,4)
+      a3(2,2,1,3)=as6(2,5)
+      a3(2,2,1,2)=as6(2,6)
+ 
+      a3(3,3,2,3)=as6(3,4)
+      a3(3,3,1,3)=as6(3,5)
+      a3(3,3,1,2)=as6(3,6)
+ 
+      a3(2,3,1,3)=as6(4,5)
+      a3(2,3,1,2)=as6(4,6)
+
+      a3(1,3,1,2)=as6(5,6)
+
+c     Impose symmetry -- general form
+
+      a3(2,2,1,1)=a3(1,1,2,2)
+      a3(3,3,1,1)=a3(1,1,3,3)
+      a3(3,3,2,2)=a3(2,2,3,3)
+
+      a3(2,1,1,2)=a3(1,2,1,2)
+      a3(1,2,2,1)=a3(1,2,1,2)
+      a3(2,1,2,1)=a3(1,2,1,2)
+
+      a3(3,1,1,3)=a3(1,3,1,3)
+      a3(1,3,3,1)=a3(1,3,1,3)
+      a3(3,1,3,1)=a3(1,3,1,3)
+
+      a3(3,2,2,3)=a3(2,3,2,3)
+      a3(2,3,3,2)=a3(2,3,2,3)
+      a3(3,2,3,2)=a3(2,3,2,3)
+
+      a3(1,1,3,2)=a3(1,1,2,3)
+      a3(2,3,1,1)=a3(1,1,2,3)
+      a3(3,2,1,1)=a3(1,1,2,3)
+
+      a3(1,1,3,1)=a3(1,1,1,3)
+      a3(1,3,1,1)=a3(1,1,1,3)
+      a3(3,1,1,1)=a3(1,1,1,3)
+
+      a3(1,1,2,1)=a3(1,1,1,2)
+      a3(1,2,1,1)=a3(1,1,1,2)
+      a3(2,1,1,1)=a3(1,1,1,2)
+
+      a3(2,2,3,2)=a3(2,2,2,3)
+      a3(2,3,2,2)=a3(2,2,2,3)
+      a3(3,2,2,2)=a3(2,2,2,3)
+
+      a3(2,2,3,1)=a3(2,2,1,3)
+      a3(1,3,2,2)=a3(2,2,1,3)
+      a3(3,1,2,2)=a3(2,2,1,3)
+
+      a3(2,2,2,1)=a3(2,2,1,2)
+      a3(1,2,2,2)=a3(2,2,1,2)
+      a3(2,1,2,2)=a3(2,2,1,2)
+
+      a3(3,3,3,2)=a3(3,3,2,3)
+      a3(2,3,3,3)=a3(3,3,2,3)
+      a3(3,2,3,3)=a3(3,3,2,3)
+
+      a3(3,3,3,1)=a3(3,3,1,3)
+      a3(1,3,3,3)=a3(3,3,1,3)
+      a3(3,1,3,3)=a3(3,3,1,3)
+
+      a3(3,3,2,1)=a3(3,3,1,2)
+      a3(1,2,3,3)=a3(3,3,1,2)
+      a3(2,1,3,3)=a3(3,3,1,2)
+
+      a3(2,3,3,1)=a3(2,3,1,3)
+      a3(3,2,1,3)=a3(2,3,1,3)
+      a3(3,2,3,1)=a3(2,3,1,3)
+      a3(1,3,2,3)=a3(2,3,1,3)
+      a3(1,3,3,2)=a3(2,3,1,3)
+      a3(3,1,2,3)=a3(2,3,1,3)
+      a3(3,1,3,2)=a3(2,3,1,3)
+
+      a3(2,3,2,1)=a3(2,3,1,2)
+      a3(3,2,1,2)=a3(2,3,1,2)
+      a3(3,2,2,1)=a3(2,3,1,2)
+      a3(1,2,2,3)=a3(2,3,1,2)
+      a3(1,2,3,2)=a3(2,3,1,2)
+      a3(2,1,2,3)=a3(2,3,1,2)
+      a3(2,1,3,2)=a3(2,3,1,2)
+
+      a3(3,1,1,2)=a3(1,3,1,2)
+      a3(1,3,2,1)=a3(1,3,1,2)
+      a3(3,1,2,1)=a3(1,3,1,2)
+      a3(1,2,1,3)=a3(1,3,1,2)
+      a3(2,1,1,3)=a3(1,3,1,2)
+      a3(1,2,3,1)=a3(1,3,1,2)
+      a3(2,1,3,1)=a3(1,3,1,2)
+
+      do i=1,3
+         do j=1,3
+            do k=1,3
+               do l=1,3
+                  a3r(i,j,k,l)=dble(realpart(a3(i,j,k,l)))
+               enddo
+            enddo
+         enddo
+      enddo
+
+      return
+      end
+
+c***********************************************************************
       subroutine isotens(as6)
 c     Elasticity of an isotropic medium.  Elasticity is divided by 
 c     density.
 c***********************************************************************
 
       implicit none
-      include '../Input/narc_dp.par'
+      include 'narc_dp.par'
 
       integer i,j
       real*8 a(6,6),as6(6,6)

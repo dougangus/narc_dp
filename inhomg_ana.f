@@ -1,16 +1,16 @@
 c...+....|....+....|....+....|....+....|....+....|....+....|....+....|..
-c  File Inhomg_ana.f contains the following 10 subroutines: Elast_axsh, 
-c  Halite_lat, Sphere, Anelast, Spetzler, Tibet, Mod_1D, Recfnc, Afar 
+c  File Inhomg_ana.f contains the following 9 subroutines: Elast_axsh, 
+c  Halite_lat, Sphere, Anelast, Spetzler, Mod_1D, Recfnc, Afar 
 c  and Afar_Alt.
 c
-c  Last modified: April 16, 2012.
+c  Last modified: April 17, 2012.
 c***********************************************************************
       subroutine elast_axsh(ix1,dx1,nx1,nx1st,nx2,nx3,a6)
 c     Input elastic constants (divided by density) in Voigt notation.
 c***********************************************************************
 
       implicit none
-      include '../Input/narc_dp.par'
+      include 'narc_dp.par'
 
       integer ix1,nx1,nx2,nx3,nx1st,jx1lo,jx1hi,kx1,kx2,kx3,i,j,k,l
       real*8 xm1,x1,dx1,fac
@@ -94,13 +94,13 @@ c     Input elastic constants (divided by density) in Voigt notation.
 c***********************************************************************
 
       implicit none
-      include '../Input/narc_dp.par'
+      include 'narc_dp.par'
 
       integer ix1,nx1,nx2,nx3,nx1st,jx1lo,jx1hi,kx1,kx2,kx3,i,j,k,l
       real*8 xm1,x1,dx1,x2,dx2,x3,dx3,fac,rmax,r
       real*8 a6(6,6,nx3mx,nx2mx,nx1sto),a(6,6)
       real*8 a3(3,3,3,3),a3r(3,3,3,3)
-      real*8 ax3(3,3,3,3),ax3r(3,3,3,3),sh3(3,3,3,3),sh3r(3,3,3,3)
+      real*8 ax3(3,3,3,3),sh3(3,3,3,3)
 
       if(ix1.le.nx1st)then
          jx1lo=1
@@ -185,14 +185,14 @@ c     Input elastic constants (divided by density) in Voigt notation.
 c***********************************************************************
 
       implicit none
-      include '../Input/narc_dp.par'
+      include 'narc_dp.par'
 
-      integer ix1,nx1,nx2,nx3,nx1st,jx1lo,jx1hi,kx1,kx2,kx3,i,j,k,l
+      integer ix1,nx1,nx2,nx3,nx1st,jx1lo,jx1hi,kx1,kx2,kx3,i,j
       integer icase,i3d,jref
       real*8 xm1,x1,dx1,x2,dx2,x3,dx3,stemp
       real*8 v0p,vsphp,vp,v0s,vsphs,vs,x1s,x2s,x3s,sc,rs
       real*8 a6(6,6,nx3mx,nx2mx,nx1sto),a(6,6)
-      real*8 a3(3,3,3,3),a3r(3,3,3,3)
+      real*8 a3(3,3,3,3)
 
       if(ix1.le.nx1st)then
          jx1lo=1
@@ -283,19 +283,19 @@ c      i3d=0    !(2D - cylinder)
       end
 
 c***********************************************************************
-      subroutine anelast(ix1,dx1,nx1,dx2,nx2,dx3,nx3,nx1st,a6)
+      subroutine anelast(ix1,dx1,nx1,nx2,nx3,nx1st,a6)
 c     Input elastic constants (divided by density) in Voigt notation.
 c***********************************************************************
 
       implicit none
-      include '../Input/narc_dp.par'
+      include 'narc_dp.par'
 
       integer ix1,nx1,nx2,nx3,nx1st,jx1lo,jx1hi,kx1,kx2,kx3,i,j
       integer icase,iwlay
-      real*8 xm1,x1,dx1,x2,dx2,x3,dx3,lmodel,kmodel
+      real*8 xm1,x1,dx1,lmodel,kmodel
       real*8 rho,z,z1,z2,dz,pfac,sfac,fac,vp,vs
       real*8 a6(6,6,nx3mx,nx2mx,nx1sto),a(6,6)
-      real*8 a3(3,3,3,3),a3r(3,3,3,3)
+      real*8 a3(3,3,3,3)
 
       if(ix1.le.nx1st)then
          jx1lo=1
@@ -432,21 +432,21 @@ c            icase=1             !(high to low velocity)
       end
 
 c***********************************************************************
-      subroutine spetzler(ix1,dx1,nx1,dx2,nx2,dx3,nx3,nx1st,a6,ijflag)
+      subroutine spetzler(ix1,dx1,dx2,nx2,dx3,nx3,nx1st,a6,ijflag)
 c     1-D isotropic medium to generate caustics (from Spetzler and 
 c     Snieder, 2003).  Input elastic constants (divided by density) in 
 c     Voigt notation.
 c***********************************************************************
 
       implicit none
-      include '../Input/narc_dp.par'
+      include 'narc_dp.par'
 
-      integer ix1,nx1,nx2,nx3,nx1st,jx1lo,jx1hi,ijflag
+      integer ix1,nx2,nx3,nx1st,jx1lo,jx1hi,ijflag
       integer kx1,kx2,kx3,i,j
       real*8 pi,vp,vs,rkx,epsi,xno,fac,x1,dx1,x2,dx2,x3,dx3,theta
       real*8 ctemp1,ctemp2,ctemp3,ctemp4,ctemp5,caustic
       real*8 a6(6,6,nx3mx,nx2mx,nx1sto),a(6,6)
-      real*8 a3(3,3,3,3),a3r(3,3,3,3)
+      real*8 a3(3,3,3,3)
 
       pi=4.d0*pi4
 
@@ -526,163 +526,12 @@ c     Caustic prediction for Spetzler inverse slowness 1-D model
       end
 
 c***********************************************************************
-      subroutine tibet(ix1,dx1,nx1,dx2,nx2,dx3,nx3,nx1st,a6)
-c     Input elastic constants (divided by density) in Voigt notation.
-c***********************************************************************
-
-      implicit none
-      include '../Input/narc_dp.par'
-
-      integer ix1,nx1,ix2,nx2,nx3,nx1st,jx1lo,jx1hi,nxtr,nztr
-      integer itr,kx1,kx2,kx3,i1d,i,j,lmodel
-      real*8 dx1,dx2,dx3,delv,xleft,xright,x2d,zdown,temp1,temp2
-      real*8 pi,x1,x2,x3,vpref,vsref,rhoref,z1d
-      real*8 a6(6,6,nx3mx,nx2mx,nx1sto),a(6,6)
-      real*8 a3(3,3,3,3),a3r(3,3,3,3)
-      real*8 xltr(nx2mx),zltr(nx1sto)
-
-      if(ix1.le.nx1st)then
-         jx1lo=1
-         jx1hi=nx1st
-      else
-         jx1lo=mod(ix1,nx1st)
-         if(jx1lo.ne.1.and.nx1st.gt.1)then
-            write(11,*)
-            write(11,*)'Error in tibet.  Calling for elastic matrix'
-            write(11,*)'when jx1lo not equal to 1.'
-            write(11,*)
-            stop
-         endif
-         jx1lo=1
-         jx1hi=nx1st
-      endif
-
-c     Check vertical and lateral dimensions for consistency
-      if(dble(nx1-1)*dabs(dx1).ne.700.d3)then
-         write(*,*)
-         write(*,*)'Error: depth dimensions of input file does not'
-         write(*,*)'match that required depth for Tibet model (700 km).'
-         write(*,*)
-         write(*,*)'Maximum depth in input file',dble(nx1-1)*dabs(dx1)
-         stop
-      endif
-      if((dble(nx2-1)*dx2.ne.600.d3).or.
-     +     (dble(nx3-1)*dx3.ne.600.d3))then
-         write(*,*)
-         write(*,*)'Error: lateral dimensions of input file does not'
-         write(*,*)'match that required depth for Tibet model (600 km).'
-         write(*,*)
-         write(*,*)'Maximum lateral dimensions from input file:'
-         write(*,*)'x2:',dble(nx2-1)*dx2
-         write(*,*)'x3:',dble(nx3-1)*dx3
-         stop
-      endif
-
-      pi=4.d0*pi4
-c     Model type and parameters:
-      if(ix1.eq.1)then
-         open(66,file='./Input/litho.par')
-         read(66,*)
-         read(66,*)lmodel
-         if(lmodel.eq.1)then
-            read(66,*)
-            read(66,*)xtrans,ztrans,delv
-            if(xtrans.gt.80.d3)then
-               write(*,*)'xtrans gt slab width .. stopping'
-               stop
-            elseif(ztrans.gt.610.d3)then
-               write(*,*)'ztrans gt slab length .. stopping'
-               stop
-            endif
-            nxtr=int(xtrans/dx2)
-            nztr=int(ztrans/dx1)
-            xleft=260.d3
-            xright=340.d3
-            do ix2=1,nx2
-               x2d=x2o+dble(kx2-1)*dx2
-               if(x2d.lt.(xleft-xtrans/2.d0))then
-                  xltr(ix2)=0.d0
-               elseif(x2d.gt.(xright+xtrans/2.d0))then
-                  xltr(ix2)=0.d0
-               else
-                  if(x2d.lt.300.d3)then
-                     itr=int((x2d-xleft-xtrans/2.d0)/dx2)+1
-                     xltr(ix2)=(1.d0-dcos(dble(itr-1)*dble(nxtr)/
-     .                    dble(nxtr-1)))/2.d0
-                  elseif(x2d.ge.300.d3)then
-                     itr=int((x2d-xright-xtrans/2.d0)/dx2)+1
-                     xltr(ix2)=(dcos(dble(itr-1)*dble(nxtr)/
-     .                    dble(nxtr-1)))/2.d0
-                  endif
-               endif
-            enddo
-            zdown=610.d3
-         elseif(lmodel.eq.2)then
-            read(66,*)
-            read(66,*)
-            read(66,*)
-            read(66,*)temp1,temp2
-         endif
-         close(66)
-      endif
-
-      do kx1=jx1lo,jx1hi
-
-         x1=x1o+dble(ix1-1+kx1-1)*dx1
-         i1d=1               !Reference 1D model
-         call mod_1d(x1,vpref,vsref,rhoref,i1d)
-
-         do kx2=1,nx2
-            do kx3=1,nx3
-               x2=x2o+dble(kx2-1)*dx2
-               x3=x3o+dble(kx3-1)*dx3
-
-               if(lmodel.eq.1)then !Slab subduction
-
-                  if(z1d.le.610.d3)then
-                     if(x2d.lt.(xleft-xtrans/2.d0))then
-                        vfast=vpref*(1.d0-delv)
-                        vslow=vsref*(1.d0-delv)
-                        den=rhoref*(1.d0-delv)
-                     elseif(x2d.gt.(xright+xtrans/2.d0))then
-                        vfast=vpref*(1.d0-delv)
-                        vslow=vsref*(1.d0-delv)
-                        den=rhoref*(1.d0-delv)
-                     else
-                        vfast=vpref*(1.d0-delv+2.d0*delv*xltr(kx2))
-                        vslow=vsref*(1.d0-delv+2.d0*delv*xltr(kx2))
-                        den=rhoref*(1.d0-delv+2.d0*delv*xltr(kx2))
-                     endif
-                  else
-                     vfast=vpref
-                     vslow=vsref
-                     den=rhoref
-                  endif
-
-                  call isotens(a)
-                  do i=1,6
-                     do j=1,6
-                        a6(i,j,kx3,kx2,kx1)=a(i,j)
-                     enddo
-                  enddo
-
-               elseif(lmodel.eq.2)then !Lithospheric drip
-               endif
-
-            enddo
-         enddo
-      enddo
-
-      return
-      end
-
-c***********************************************************************
       subroutine mod_1d(zd,vpref,vsref,rhoref,i1d)
 c     1D reference model.
 c***********************************************************************
 
       implicit none
-      include '../Input/narc_dp.par'
+      include 'narc_dp.par'
 
       integer i1d
       real*8 zd,vpref,vsref,rhoref,z1d,p2sscale
@@ -792,12 +641,12 @@ c     Input elastic constants (divided by density) in Voigt notation.
 c***********************************************************************
 
       implicit none
-      include '../Input/narc_dp.par'
+      include 'narc_dp.par'
 
       integer ix1,nx1,nx2,nx3,nx1st,jx1lo,jx1hi,kx1,kx2,kx3,i,j,layer
       real*8 dx1,dx2,dx3,xm1,x1,x2,x3
       real*8 a6(6,6,nx3mx,nx2mx,nx1sto),a(6,6)
-      real*8 a3(3,3,3,3),a3r(3,3,3,3)
+      real*8 a3(3,3,3,3)
 
       if(ix1.le.nx1st)then
          jx1lo=1
@@ -855,19 +704,19 @@ c     Maximum depth of model
       end
 
 c***********************************************************************
-      subroutine afar(jx1,ix1,dx1,nx1,dx2,nx2,dx3,nx3,nx1st,a6)
+      subroutine afar(jx1,ix1,dx2,nx2,dx3,nx3,nx1st,a6)
 c     Input elastic constants (divided by density) in Voigt notation.
 c***********************************************************************
 
       implicit none
-      include '../Input/narc_dp.par'
+      include 'narc_dp.par'
 
-      integer jx1,ix1,nx1,nx2,nx3,nx1st,jx1lo,jx1hi,kx1,kx2,kx3,i,j
-      integer ii,jj,k
-      real*8 dx1,dx2,dx3,x2,x3,pi,fac,ltrans,l2trans
-      real*8 a6(6,6,nx3mx,nx2mx,nx1sto),a(6,6)
+      integer jx1,ix1,nx2,nx3,nx1st,jx1lo,jx1hi,kx1,kx2,kx3,i,j
+      integer ii,jj
+      real*8 dx2,dx3,x2,x3,pi,fac,ltrans,l2trans
+      real*8 a6(6,6,nx3mx,nx2mx,nx1sto)
       real*8 a1(6,6),a2(6,6),a_alt(6,6),den1,den2
-      real*8 a3(3,3,3,3),a3r(3,3,3,3)
+      real*8 a3r(3,3,3,3)
       character*100 modname2
 
       pi=4.d0*pi4
@@ -983,23 +832,23 @@ c     Setup initial elasticity for incident wavefield calculation
             enddo
          enddo
       endif
-      
+
       return
       end
 
 c***********************************************************************
-      subroutine afar_alt(jx1,ix1,dx1,nx1,dx2,nx2,dx3,nx3,nx1st,a6)
+      subroutine afar_alt(jx1,ix1,dx2,nx2,dx3,nx3,nx1st,a6)
 c     Input elastic constants (divided by density) in Voigt notation.
 c***********************************************************************
 
       implicit none
-      include '../Input/narc_dp.par'
+      include 'narc_dp.par'
 
-      integer jx1,ix1,nx1,nx2,nx3,nx1st,jx1lo,jx1hi,kx1,kx2,kx3,i,j
+      integer jx1,ix1,nx2,nx3,nx1st,jx1lo,jx1hi,kx1,kx2,kx3,i,j
       integer ii,jj
-      real*8 dx1,dx2,dx3,x2,x3,pi,rfac,ltrans,l2trans,angle,rangle
-      real*8 a6(6,6,nx3mx,nx2mx,nx1sto),a(6,6)
-      real*8 a_0(6,6),a_30(6,6),ao(6,6),a_alt(6,6),den1,den2
+      real*8 dx2,dx3,x2,x3,pi,ltrans,l2trans,rangle
+      real*8 a6(6,6,nx3mx,nx2mx,nx1sto)
+      real*8 a_0(6,6),a_30(6,6),a_alt(6,6)
       real*8 a3(3,3,3,3),a3r(3,3,3,3),angle1,angle2,angle3
       character*100 modname
 
@@ -1032,7 +881,7 @@ c  JH - changd l2trans, was 4d03
          enddo
          read(30,*)ii,jj,den
          close(30)
-			
+		
 c JH - rotating, to fit data
 
 c      call aijkl(a_0,a3)
@@ -1042,29 +891,156 @@ c      angle3=0.d0
 c      call rotate(angle1,angle2,angle3,a3,a3r)
 c      call c66(a3r,a_0)
 			
-      call aijkl(a_30,a3)
-      angle1=0.d0
-      angle2=60.*(pi/180.)
-      angle3=0.d0
-      call rotate(angle1,angle2,angle3,a3,a3r)
-      call c66(a3r,a_30)
-			
+         call aijkl(a_30,a3)
+         angle1=0.d0
+         angle2=60.*(pi/180.)
+         angle3=0.d0
+         call rotate(angle1,angle2,angle3,a3,a3r)
+         call c66(a3r,a_30)
+
 c JH - rotating into one-way co-ordinates
 
-      call aijkl(a_0,a3)
-      angle1=pi/2.d0
-      angle2=0.d0
-      angle3=0.d0
-      call rotate(angle1,angle2,angle3,a3,a3r)
-      call c66(a3r,a_0)
-			
-      call aijkl(a_30,a3)
-      angle1=pi/2.d0
-      angle2=0.d0
-      angle3=0.d0
-      call rotate(angle1,angle2,angle3,a3,a3r)
-      call c66(a3r,a_30)
-			
+         call aijkl(a_0,a3)
+         angle1=pi/2.d0
+         angle2=0.d0
+         angle3=0.d0
+         call rotate(angle1,angle2,angle3,a3,a3r)
+         call c66(a3r,a_0)
+
+         call aijkl(a_30,a3)
+         angle1=pi/2.d0
+         angle2=0.d0
+         angle3=0.d0
+         call rotate(angle1,angle2,angle3,a3,a3r)
+         call c66(a3r,a_30)
+
+c     Setup initial elasticity for incident wavefield calculation
+         if(jx1.eq.-1)then
+            do i=1,6
+               do j=1,6
+                  a_alt(i,j)=(a_0(i,j)+a_30(i,j))/2.d0
+               enddo
+            enddo
+            call aijkl(a_alt,a3r)
+            call averps(a3r,vfast,vslow)
+            if(ipol.eq.1) call isotens(a_alt)
+         endif
+      endif
+
+      if(ix1.le.nx1st)then
+         jx1lo=1
+         jx1hi=nx1st
+      else
+         jx1lo=mod(ix1,nx1st)
+         if(jx1lo.ne.1.and.nx1st.gt.1)then
+            write(11,*)
+            write(11,*)'Error in afar.  Calling for elastic '
+            write(11,*)'matrix when jx1lo ne to 1.'
+            write(11,*)
+            stop
+         endif
+         jx1lo=1
+         jx1hi=nx1st
+      endif
+
+      if(ix1.le.10)then
+         do kx1=jx1lo,jx1hi
+            do kx2=1,nx2
+               do kx3=1,nx3
+                  x2=x2o+dble(kx2-1)*dx2
+                  x3=x3o+dble(kx3-1)*dx3
+                  if(jx1.eq.-1)then !Pre extrapoloation - average Cij
+                     do i=1,6
+                        do j=1,6
+                           a6(i,j,kx3,kx2,kx1)=a_alt(i,j)
+                        enddo
+                     enddo
+                  elseif(jx1.ne.-1)then
+                     do i=1,6
+                        do j=1,6
+                           a6(i,j,kx3,kx2,kx1)=a_0(i,j)
+                        enddo
+                     enddo
+                  endif
+               enddo
+            enddo
+         enddo
+      endif
+
+      return
+      end
+
+c***********************************************************************
+      subroutine karakoram(jx1,ix1,dx2,nx2,dx3,nx3,nx1st,a6)
+c     Input elastic constants (divided by density) in Voigt notation.
+c***********************************************************************
+
+      implicit none
+      include 'narc_dp.par'
+
+      integer jx1,ix1,nx2,nx3,nx1st,jx1lo,jx1hi,kx1,kx2,kx3,i,j
+      integer ii,jj
+      real*8 dx2,dx3,x2,x3,pi,rfac,ltrans,l2trans,angle,rangle
+      real*8 a6(6,6,nx3mx,nx2mx,nx1sto)
+      real*8 a_0(6,6),a_30(6,6),a_alt(6,6),ao(6,6)
+      real*8 a3(3,3,3,3),a3r(3,3,3,3),angle1,angle2,angle3
+      character*100 modname
+
+      pi=4.d0*pi4
+
+c  JH - changd l2trans, was 4d03
+      ltrans=1.d0
+      l2trans=ltrans/2.d0
+      rangle=30.0d0
+
+      if(ix1.le.10)then
+         open(30,file=modelcart_e)
+         do i=1,6
+            do j=i,6
+               read(30,*)ii,jj,a_0(i,j)
+               if(dabs(a_0(i,j)).lt.1.d0) a_0(i,j)=0.d0
+               if(i.ne.j)a_0(j,i)=a_0(i,j)
+            enddo
+         enddo
+         read(30,*)ii,jj,den
+         read(30,*)modname
+         close(30)
+         do i=1,6
+            do j=1,6
+               a_0(i,j)=a_0(i,j)/den
+            enddo
+         enddo
+         open(30,file=modname)
+         do i=1,6
+            do j=i,6
+               read(30,*)ii,jj,a_30(i,j)
+               if(dabs(a_30(i,j)).lt.1.d0) a_30(i,j)=0.d0
+               if(i.ne.j)a_30(j,i)=a_30(i,j)
+            enddo
+         enddo
+         read(30,*)ii,jj,den
+         close(30)
+         do i=1,6
+            do j=1,6
+               a_30(i,j)=a_30(i,j)/den
+            enddo
+         enddo
+
+c Rotating from global into one-way co-ordinates
+
+         call aijkl(a_0,a3)
+         angle1=pi/2.d0
+         angle2=0.d0
+         angle3=0.d0
+         call rotate(angle1,angle2,angle3,a3,a3r)
+         call c66(a3r,a_0)
+         call aijkl(a_30,a3)
+         angle1=pi/2.d0
+         angle2=0.d0
+         angle3=0.d0
+         call rotate(angle1,angle2,angle3,a3,a3r)
+         call c66(a3r,a_30)
+
 c     Setup initial elasticity for incident wavefield calculation
          if(jx1.eq.-1)then
             do i=1,6
@@ -1107,54 +1083,11 @@ c     Setup initial elasticity for incident wavefield calculation
                         enddo
                      enddo
                   elseif(jx1.ne.-1)then
-
-c  outside rift
-
-                     if(x2.lt.(208.1d3-l2trans).or.
-     .                    x2.gt.(248.1d3+l2trans))then
-                        angle=0.d0
-
-c in transition west
-
-                     elseif(x2.ge.(208.1d3-l2trans).and.
-     .                       x2.le.(208.1d3+l2trans))then
-                        rfac=(1.d0+dcos((208.1d3+l2trans-x2)*pi/
-     .                       ltrans))/2.d0
-                        angle=-rangle*rfac*pi/180.d0
-
-c  in rift zone 
-
-                     elseif(x2.gt.(208.1d3+l2trans).and.
-     .                       x2.lt.(248.1d3-l2trans))then
-                        angle=-rangle*pi/180.d0
-
-c in transition east
-
-                     elseif(x2.ge.(248.1d3-l2trans).and.
-     .                       x2.le.(248.1d3+l2trans))then
-                        rfac=(1.d0+dcos((248.1d3+l2trans-x2)*pi/
-     .                       ltrans))/2.d0
-                        angle=-rangle*(1.d0-rfac)*pi/180.d0
-                     endif
-
-
-                     if(angle.ne.0.d0)then
-                        call aijkl(a_30,a3)
-                        call rotate(0.d0,0.d0,-angle,a3,a3r)
-                        call c66(a3r,ao)
-                        do i=1,6
-                           do j=1,6
-                              a6(i,j,kx3,kx2,kx1)=ao(i,j)
-                           enddo
+                     do i=1,6
+                        do j=1,6
+                           a6(i,j,kx3,kx2,kx1)=a_30(i,j)
                         enddo
-                     else
-                        do i=1,6
-                           do j=1,6
-                              a6(i,j,kx3,kx2,kx1)=a_30(i,j)
-                           enddo
-                        enddo
-                     endif
-
+                     enddo
                   endif
                enddo
             enddo

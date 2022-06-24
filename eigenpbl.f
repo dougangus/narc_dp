@@ -3,7 +3,7 @@ c  File Eigenpbl.f contains the following 12 subroutines:
 c  Slowness, Anisoev, Isoev, Vertslw, Eig3, Polarr, Velg, Sortp,
 c  Preturn, Tql2 and Tred2.
 c
-c  Last modified: April 16, 2012.
+c  Last modified: April 17, 2012.
 c***********************************************************************
       subroutine slowness(cc,phi,theta,vn,p,v)
 c     Input: cc        - elastic constants devided by density
@@ -276,7 +276,7 @@ c     Orientations check Aug 17, 1999 by Doug Angus (RHR).
 c***********************************************************************
 
       implicit none
-      include '../Input/narc_dp.par'
+      include 'narc_dp.par'
 
       integer nreal,itest,i,j
       real*8 pa,p2,p3,fac1,fac2,acomp,bcomp,ccomp,temp
@@ -549,7 +549,7 @@ c***********************************************************************
       implicit none
 
       integer i,j,k,j1,k1,j2,k2,j3,k3,ier
-      real*8 p2,p3,ax,bx,cx,dx,ex,fx
+      real*8 p2,p3,ax,bx,cx,dx,ex
       real*8 a(3,3,3,3)
       real*8 alpha(3,3), beta(3,3), gamma(3,3)
       real*8 axx(6),bxx(6),cxx(6),dxx(6),exx(6),fxx(6),gxx(6)
@@ -647,7 +647,7 @@ c***********************************************************************
 
       call dpoly(coe,xcoe,6,p1r,p1i,ier)
 
- 999  return
+      return
       end
 
 c***********************************************************************
@@ -684,7 +684,7 @@ c     Generating g_jk
       g(2,2)=g(2,2)-1.d0
       g(3,3)=g(3,3)-1.d0
 
-      call  xrdvec(g,ivec,pol)
+      call xrdvec(g,ivec,pol)
 
 c     normalise
 
@@ -833,7 +833,7 @@ c     This subroutine returns the appropriate slownesses.
 c***********************************************************************
 
       implicit none
-      include '../Input/narc_dp.par'
+      include 'narc_dp.par'
 
       integer nreal
       real*8 p1(3),p(3,3)
@@ -1078,7 +1078,8 @@ c***********************************************************************
 
       integer i,j,k,l,m,n,ii,l1,l2,nm,mml,ierr
       real*8 d(n),e(n),z(nm,n)
-      real*8 c,c2,c3,dl1,el1,f,g,h,p,r,s,s2,tst1,tst2,pythag
+      real*8 c,c2,c3,dl1,el1,f,g,h,p,r,s,s2,tst1,tst2
+      real*4 pythag
 
       ierr = 0
       if (n .eq. 1) go to 1001
@@ -1110,7 +1111,7 @@ c     .......... form shift ..........
          l2 = l1 + 1
          g = d(l)
          p = (d(l1) - g) / (2.0d0 * e(l))
-         r = pythag(p,1.0d0)
+         r = dble(pythag(p,1.0))
          d(l) = e(l) / (p + dsign(r,p))
          d(l1) = e(l) * (p + dsign(r,p))
          dl1 = d(l1)
@@ -1136,7 +1137,7 @@ c     .......... for i=m-1 step -1 until l do -- ..........
             i = m - ii
             g = c * e(i)
             h = c * p
-            r = pythag(p,e(i))
+            r = dble(pythag(sngl(p),sngl(e(i))))
             e(i+1) = s * r
             s = e(i) / r
             c = p / r
@@ -1194,9 +1195,9 @@ c***********************************************************************
 c     Function call calculates dsqrt(a*a+b*b).
 c***********************************************************************
 
-      real*8 a,b
+      real*4 a,b
 
-      pythag = dsqrt(a*a + b*b)
+      pythag = sqrt(a*a + b*b)
 
       return
       end

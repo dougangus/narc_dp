@@ -4,18 +4,18 @@ c  Trnsfv6.  This subroutine evaluates the stability and dispersion
 c  characteristics of the FD extrapolator given the input initial 
 c  conditions and grid paramenters (see Angus & Thomson, 2006).
 c
-c  Last modified: April 16, 2012.
+c  Last modified: April 17, 2012.
 c***********************************************************************
-      subroutine fd_ana(nx1,dx1,nx2,dx2,nx3,dx3,nt,dt,omwin,rpeak,
+      subroutine fd_ana(dx1,nx2,dx2,nx3,dx3,nt,dt,omwin,
      +     p1inc,p2inc,p3inc,a6,iref)
 c***********************************************************************
 
       implicit none
-      include '../Input/narc_dp.par'
+      include 'narc_dp.par'
 
-      integer nx1,nx2,nx3,nt,iref,iom,nom,nom2,icomp,ix2,ix3
+      integer nx2,nx3,nt,iref,iom,nom,nom2,icomp,ix2,ix3
       integer i,j,ic,jc,kc,ierr,ievaltag,kx2,kx3,ik,jk
-      real*8 dx1,dx2,dx3,dt,omwin,rpeak,pi,om,omn,tott,delom,dx
+      real*8 dx1,dx2,dx3,dt,omwin,pi,om,omn,tott,delom,dx
       real*8 Dctrace,Ddtrace,rkctemp,rkdtemp,dkc,rtemp,rktmp
       real*8 p1qP,p1qS1,p1qS2,rk1,rk2,rk3,rhomax,rmax,Al2norm
       real*8 a3(3,3,3,3),c11inv(3,3),a6(6,6),rkval(3)
@@ -32,8 +32,8 @@ c***********************************************************************
       complex*16 ai
 
       real*8 amr(6,6),ami(6,6)
-      real*8 zr(6,6),zi(6,6),wr(6),wi(6),Atemp(6,6)
-      real*8 zr3(3,3),zi3(3,3),wr3(3),wi3(3),Dctemp(3,3),Ddtemp(3,3)
+      real*8 zr(6,6),wr(6),wi(6),Atemp(6,6)
+      real*8 zr3(3,3),wr3(3),wi3(3),Dctemp(3,3),Ddtemp(3,3)
       real*8 dcr(3,3),dci(3,3),ddr(3,3),ddi(3,3)
       real*8 ec(3,nx3mx,nx2mx,ntmx),ed(3,nx3mx,nx2mx,ntmx)
 
@@ -110,7 +110,7 @@ c     Setup diagonal reference phase matrix
                   diag(3,3)=cdexp(ai*om*p1qS2*dx1)
                endif
 
-               call cinv3(diag,dinv)
+               call crinv3(diag,dinv)
                rhomax=-1.d10
                rmax=-1.d10
 
@@ -186,7 +186,7 @@ c     Evaluate eigensolution to amplification matrix using EISPACK
                   write(*,*)
                   write(*,*)'Ierr.ne.0 from CG call.'
                   write(*,*)'iom,ix3,ix2',iom,ix3,ix2
-c                  pause
+                  stop
                endif
                ievaltag=0
                do i=1,6
@@ -349,7 +349,7 @@ c     Continuous wave-equation
                         write(*,*)
                         write(*,*)'Ierr.ne.0 from CG call.'
                         write(*,*)'iom,ix3,ix2',iom,ix3,ix2
-c                        pause
+                        stop
                      endif
                      if(iref.eq.0)then
                         ec(icomp,ix3,ix2,iom)=dsqrt(wr3(1))
@@ -363,7 +363,7 @@ c     Discrete wave-equation
                         write(*,*)
                         write(*,*)'Ierr.ne.0 from CG call.'
                         write(*,*)'iom,ix3,ix2',iom,ix3,ix2
-c                        pause
+                        stop
                      endif
                      if(iref.eq.0)then
                         ed(icomp,ix3,ix2,iom)=dsqrt(wr3(1))
@@ -424,7 +424,7 @@ c     radius (stable if rmax<1.0005)
       write(*,*)'                 scheme greater than 5.0 for at least'
       write(*,*)'                 of the frequency components:'
       write(*,*)'                 max(spectral amplitude)=',rmax
-c      pause
+      stop
       endif
       if(rmax.gt.1.0005d0)then
       write(*,*)'                 Warning: spectral amplitude for FD'
@@ -432,7 +432,7 @@ c      pause
       write(*,*)'                 at least one of the frequency'
       write(*,*)'                 components.'
       write(*,*)'                 max(spectral amplitude)=',rmax
-c      pause
+      stop
       endif
       if(rmax.le.1.0005d0)then
       write(*,*)'                 Propagator stable for the FD scheme'
@@ -455,7 +455,7 @@ c     Dispersion results:
       write(*,*)'                 Pwave in dispersive range'
       write(*,*)'                 Continue with extrapolation?'
       write(*,*)
-c      pause
+      stop
       endif
       elseif(icomp.ge.2.and.iwave.eq.icomp)then
       if(rktmp.le.0.1d0)then
@@ -466,7 +466,7 @@ c      pause
       write(*,*)'                 Swave in dispersive range'
       write(*,*)'                 Continue with extrapolation?'
       write(*,*)
-c      pause
+      stop
       endif
       endif
       if(icomp.eq.iwave)then
@@ -481,7 +481,7 @@ c      pause
       end
 
 c***********************************************************************
-      subroutine sortslwc(wr,wi,zr,zi,wc,zc)
+      subroutine sortslwc(wr,wi,zr,wc,zc)
 c     Sorts eigenvalues/vectors into separate up/down sets.
 c     This version sorts real and imaginary parts into positive and
 c     negative groups. Does not sort within a group (unecessary?).

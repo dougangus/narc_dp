@@ -24,20 +24,16 @@ c     Variable initialisation.
       real*8 dt,pi,tott,om,delom,dx1,x1o,omc,xshift
       real*8 tbg(nx2mx,nx3mx),tnd(nx2mx,nx3mx)
 
-      real*4 xfun(ntmx),yfun1(ntmx)
       real*4 tbeg(ntrmx),tend(ntrmx)
       real*4 wxmax,wxmin,wymax,wymin,wdx,wdy
       real*4 xmax,xmin,ymax,ymin
 
-      complex*16 uvc(3,ntmx,nx3mx,nx2mx),work1(ntmx),work2(ntmx),
-     +     work3(ntmx),cxshift,ai
+      complex*16 uvc(3,ntmx,nx3mx,nx2mx),work1(ntmx),
+     +     cxshift,ai
 
-      character*80 xtext,ytext,ctext
-      character*6 chfmx,chfmy
-      character*1 ansm,answer1,answer2,answer3
+      character*1 ansm,answer3
 
       dimension nta(nx2mx,nx3mx),nta2(ntrmx)
-      dimension ix2pt(ntracwmx),ix3pt(ntracwmx)
       dimension ix2pt0(ntracwmx), ix2pt1(ntracwmx), ix2pt2(ntracwmx),
      .          ix2pt3(ntracwmx), ix3pt0(ntracwmx), ix3pt1(ntracwmx), 
      .          ix3pt2(ntracwmx), ix3pt3(ntracwmx)
@@ -154,12 +150,12 @@ c     Read frequency-domain wavefield
 c     Determine frequency content information
 
       omc=1.d0/(2.d0*dt)            !Nyquist frequency
-      tott=dreal(nt)*(dt)           !time series record length
+      tott=dble(nt)*(dt)           !time series record length
       delom=1.d0/tott               !frequency step length
 
 c     Read in the user selected grid points to be viewed.
 
-111      write(*,*)
+         write(*,*)
          write(*,*)'Primary receiver coordinate definition:'
          write(*,*)'To view x2 from 1 to nx2 enter 2.'
          write(*,*)'Or to view x3 from 1 to nx3 enter 3.'
@@ -267,7 +263,7 @@ c     Read in the user selected grid points to be viewed.
 
       write(*,*)
       write(*,*)'Frequency band is (low,high):'
-      write(*,*)dreal(ilow-1)*delom,dreal(ihigh-1)*delom,' Hz.'
+      write(*,*)dble(ilow-1)*delom,dble(ihigh-1)*delom,' Hz.'
 
       write(*,*)
       write(*,*)'Enter phase shift (in %) for waveform display .'
@@ -377,7 +373,7 @@ c     Note storing in uvec(1)
          
 c     Find scaling for plotting from 1st level amplitudes
 
- 699     if(ntrac.eq.ntracw)then 
+         if(ntrac.eq.ntracw)then 
 
             smaxx=0.0
             smaxa=0.0
@@ -581,7 +577,7 @@ c     Close GKS.
 
       CALL GRCLSE(ANSM,UNIT1,UNIT2)
 
- 69   stop
+      stop
       end
 
 c***********************************************************************
@@ -637,8 +633,10 @@ c     OPEN AND ACTIVATE POSTSCRIPT DEVICE
 c         CALL GOPWK(4,UNIT2,10)
 c         CALL GACWK(4)
 
-         call NGSETC('ME','./Output/wavepanel.ps')
-         CALL GOPWK(2,2,20)
+c         call NGSETC('ME','./Output/wavepanel.ps')
+c         CALL GOPWK(2,2,20)
+         CALL NGSETC('ME','./Output/plot_1C3D.eps')
+         CALL GOPWK(2,2,21)
          CALL GACWK(2)
 
 c     AND WISS FOR SEGMENTS
